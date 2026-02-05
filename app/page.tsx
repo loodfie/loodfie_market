@@ -189,8 +189,82 @@ export default function HalamanDepan() {
         </div>
       </div>
 
-      <footer className="bg-gray-900 text-white text-center py-8 mt-12 border-t border-gray-800">
-        <p className="text-sm opacity-60 font-medium">&copy; {new Date().getFullYear()} {toko.nama_toko}. All rights reserved.</p>
+     {/* FOOTER PREMIUM V2 (LINK AKTIF) */}
+      <footer className="bg-gray-900 text-white pt-16 pb-8 mt-20 border-t-4 border-blue-500">
+        <div className="container mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+            
+            {/* Kolom 1: Brand & Sosmed Aktif */}
+            <div>
+              <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center text-sm">L</span>
+                {toko.nama_toko}
+              </h3>
+              <p className="text-gray-400 leading-relaxed mb-6">
+                Platform jual beli produk digital terpercaya. Transaksi aman, file langsung terkirim otomatis.
+              </p>
+              
+              {/* SOSMED AKTIF (Ganti linknya nanti ya) */}
+              <div className="flex gap-4">
+                <a href="https://instagram.com" target="_blank" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-pink-600 hover:text-white transition cursor-pointer shadow-lg">
+                  IG
+                </a>
+                <a href="https://facebook.com" target="_blank" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-blue-600 hover:text-white transition cursor-pointer shadow-lg">
+                  FB
+                </a>
+                {/* Tombol WA di Footer */}
+                <a href="https://wa.me/6285314445959" target="_blank" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-green-500 hover:text-white transition cursor-pointer shadow-lg">
+                  WA
+                </a>
+              </div>
+            </div>
+
+            {/* Kolom 2: Link Cepat */}
+            <div>
+              <h4 className="text-lg font-bold mb-6 text-blue-400 uppercase tracking-wider">Menu Pintas</h4>
+              <ul className="space-y-3 text-gray-400">
+                <li><Link href="/" className="hover:text-blue-400 transition flex items-center gap-2">🏠 Beranda</Link></li>
+                <li><button onClick={() => document.getElementById('produk-area')?.scrollIntoView({behavior: 'smooth'})} className="hover:text-blue-400 transition flex items-center gap-2">🛍️ Katalog Produk</button></li>
+                <li><Link href="/dashboard" className="hover:text-blue-400 transition flex items-center gap-2">👤 Member Area</Link></li>
+                
+                {/* Hubungi Kami -> Ke WhatsApp */}
+                <li>
+                  <a href="https://wa.me/628585314445959" target="_blank" className="hover:text-green-400 transition flex items-center gap-2">
+                    📞 Hubungi Kami
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Kolom 3: Badge Pembayaran (Hanya Info) */}
+            <div>
+              <h4 className="text-lg font-bold mb-6 text-blue-400 uppercase tracking-wider">Pembayaran</h4>
+              <p className="text-gray-400 mb-4 text-sm">Metode pembayaran yang kami terima:</p>
+              
+              <div className="flex flex-wrap gap-2">
+                <span className="bg-white text-blue-900 px-3 py-1 rounded font-bold text-xs shadow cursor-default" title="Tersedia">BCA</span>
+                <span className="bg-white text-blue-900 px-3 py-1 rounded font-bold text-xs shadow cursor-default" title="Tersedia">Mandiri</span>
+                <span className="bg-white text-blue-900 px-3 py-1 rounded font-bold text-xs shadow cursor-default" title="Tersedia">DANA</span>
+                <span className="bg-white text-blue-900 px-3 py-1 rounded font-bold text-xs shadow cursor-default" title="Tersedia">OVO</span>
+                <span className="bg-white text-blue-900 px-3 py-1 rounded font-bold text-xs shadow cursor-default" title="Tersedia">QRIS</span>
+              </div>
+              
+              <div className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-700 flex items-center gap-3">
+                <span className="text-2xl">🔒</span>
+                <div>
+                  <p className="text-xs text-gray-300 font-bold">Jaminan Keamanan</p>
+                  <p className="text-[10px] text-gray-500">Data Anda dilindungi enkripsi SSL.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-800 pt-8 text-center">
+            <p className="text-gray-500 text-sm">
+              &copy; {new Date().getFullYear()} <span className="text-white font-bold">{toko.nama_toko}</span>. All rights reserved.
+            </p>
+          </div>
+        </div>
       </footer>
     </div>
   );
