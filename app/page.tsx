@@ -125,34 +125,69 @@ export default function HalamanDepan() {
         </div>
       </header>
 
-      {/* DAFTAR PRODUK */}
-      <main className="container mx-auto px-6 py-12">
-        {loading ? <div className="text-center py-20 text-gray-400">Sedang memuat produk...</div> : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {produk.map((item) => (
-                    <div key={item.id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition hover:-translate-y-1 duration-300 border border-gray-100 group flex flex-col h-full">
-                        <div className="h-56 bg-gray-100 overflow-hidden relative">
-                            <img src={item.gambar} alt={item.nama} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" />
-                        </div>
-                        <div className="p-6 flex flex-col flex-grow">
-                            <h3 className="text-xl font-bold text-gray-800 mb-2 leading-tight">{item.nama}</h3>
-                            <p className="text-gray-500 text-sm mb-4 line-clamp-3 flex-grow">{item.deskripsi}</p>
-                            <div className="pt-4 border-t border-gray-50 flex justify-between items-center mt-auto">
-                                <span className="text-lg font-bold text-blue-600">Rp {Number(item.harga).toLocaleString('id-ID')}</span>
-                                <button 
-                                    onClick={() => handleBeli(item)} // Kirim seluruh data item
-                                    style={{ backgroundColor: toko.warna_header }} 
-                                    className="px-5 py-2.5 rounded-lg text-white font-bold text-sm hover:opacity-90 hover:shadow-lg transition transform active:scale-95"
-                                >
-                                    Beli Sekarang 🛒
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ))}
+     {/* AREA PRODUK YANG DIPERCANTIK */}
+      <div id="produk-area" className="container mx-auto px-6 py-20 bg-gray-50">
+        
+        {/* Judul Seksi dengan Garis Bawah Cantik */}
+        <div className="text-center mb-16">
+          <span className="text-blue-600 font-bold tracking-wider uppercase text-sm">Katalog Pilihan</span>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mt-2 mb-4">Produk Unggulan Kami 🔥</h2>
+          <div className="w-20 h-1.5 bg-gradient-to-r from-blue-500 to-cyan-400 mx-auto rounded-full"></div>
+        </div>
+
+        {/* Grid Produk Baru */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          {produk.map((item) => (
+            <div key={item.id} className="group bg-white rounded-3xl shadow-xl overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border border-gray-100">
+               
+               {/* Bagian Gambar (Zoom Effect) */}
+               <div className="h-64 overflow-hidden relative bg-gray-100">
+                  {/* Label Kategori Pojok */}
+                  <div className="absolute top-4 left-4 z-10">
+                    <span className="bg-white/90 backdrop-blur text-blue-800 text-xs font-bold px-3 py-1 rounded-full shadow-sm border border-blue-100">
+                      Digital Product
+                    </span>
+                  </div>
+
+                  <img 
+                    src={item.gambar} 
+                    alt={item.nama_produk} 
+                    className="w-full h-full object-cover transform group-hover:scale-110 transition duration-700 ease-in-out" 
+                  />
+                  
+                  {/* Overlay Gelap saat Hover */}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition duration-300"></div>
+               </div>
+
+               {/* Bagian Informasi Produk */}
+               <div className="p-8">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-3 leading-tight group-hover:text-blue-600 transition">
+                    {item.nama_produk}
+                  </h3>
+                  
+                  {/* Deskripsi Singkat (Dibatasi 2 baris) */}
+                  <p className="text-gray-500 text-sm mb-6 line-clamp-2 leading-relaxed">
+                    {item.deskripsi || 'Deskripsi produk belum tersedia. Segera miliki produk berkualitas ini sekarang juga.'}
+                  </p>
+                  
+                  {/* Harga & Tombol */}
+                  <div className="flex justify-between items-center pt-6 border-t border-gray-100">
+                     <div className="flex flex-col">
+                        <span className="text-xs text-gray-400 font-semibold uppercase">Harga Spesial</span>
+                        <span className="text-2xl font-extrabold text-blue-600">
+                          Rp {Number(item.harga).toLocaleString('id-ID')}
+                        </span>
+                     </div>
+                     
+                     <Link href={`/produk/${item.id}`} className="bg-gray-900 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 hover:scale-110 hover:rotate-12 transition-all duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                     </Link>
+                  </div>
+               </div>
             </div>
-        )}
-      </main>
+          ))}
+        </div>
+      </div>
 
       <footer className="bg-gray-900 text-white text-center py-8 mt-12 border-t border-gray-800">
         <p className="text-sm opacity-60 font-medium">&copy; {new Date().getFullYear()} {toko.nama_toko}. All rights reserved.</p>
