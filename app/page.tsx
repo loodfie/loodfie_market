@@ -229,7 +229,7 @@ export default function HalamanDepan() {
                 
                 {/* Hubungi Kami -> Ke WhatsApp */}
                 <li>
-                  <a href="https://wa.me/628585314445959" target="_blank" className="hover:text-green-400 transition flex items-center gap-2">
+                  <a href="https://wa.me/6285314445959" target="_blank" className="hover:text-green-400 transition flex items-center gap-2">
                     📞 Hubungi Kami
                   </a>
                 </li>
