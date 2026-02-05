@@ -92,14 +92,37 @@ export default function HalamanDepan() {
         )}
       </nav>
 
-      {/* HEADER */}
-      <header style={{ backgroundColor: toko.warna_header }} className="text-white shadow-lg py-16 text-center transition-colors duration-500 relative overflow-hidden">
+      {/* HEADER BARU: GRADASI SULTAN */}
+      <header className="bg-gradient-to-br from-blue-900 via-blue-600 to-cyan-500 text-white shadow-2xl py-24 text-center relative overflow-hidden">
+        
+        {/* Hiasan Latar (Cahaya Blur) */}
+        <div className="absolute top-0 left-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -translate-x-20 -translate-y-20"></div>
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-yellow-400 opacity-20 rounded-full blur-3xl translate-x-20 translate-y-20"></div>
+
         <div className="container mx-auto px-6 relative z-10">
-            {toko.logo && <img src={toko.logo} alt="Logo" className="h-24 mx-auto mb-4 bg-white p-2 rounded-full shadow-md object-contain"/>}
-            <h1 className="text-4xl md:text-5xl font-extrabold mb-2 tracking-tight">{toko.nama_toko}</h1>
-            <p className="text-lg opacity-90 font-light">{toko.tagline}</p>
+            {/* Logo dengan efek melayang */}
+            {toko.logo && (
+              <div className="mb-8 relative inline-block">
+                <div className="absolute inset-0 bg-white opacity-20 blur-xl rounded-full"></div>
+                <img src={toko.logo} alt="Logo" className="h-32 mx-auto relative bg-white p-3 rounded-full shadow-lg object-contain hover:scale-110 transition duration-500"/>
+              </div>
+            )}
+            
+            <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tight drop-shadow-lg">
+              {toko.nama_toko}
+            </h1>
+            
+            <p className="text-xl md:text-2xl text-blue-100 font-light max-w-2xl mx-auto leading-relaxed mb-10">
+              {toko.tagline ? toko.tagline : 'Temukan Produk Digital Terbaik Di Sini'}
+            </p>
+
+            <button 
+                onClick={() => document.getElementById('produk-area')?.scrollIntoView({behavior: 'smooth'})} 
+                className="bg-white text-blue-700 px-10 py-4 rounded-full font-bold text-lg shadow-xl hover:bg-yellow-400 hover:text-blue-900 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+            >
+                Mulai Belanja 🛍️
+            </button>
         </div>
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
       </header>
 
       {/* DAFTAR PRODUK */}
