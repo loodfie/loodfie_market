@@ -8,16 +8,22 @@ import { useRouter } from 'next/navigation';
 export default function Home() {
   const [produk, setProduk] = useState<any[]>([]);
   const [filteredProduk, setFilteredProduk] = useState<any[]>([]);
-  const [toko, setToko] = useState({ nama_toko: 'Loodfie Market', deskripsi: 'Pusat Produk Digital Terlengkap' });
+  
+  // Default Data
+  const [toko, setToko] = useState({ 
+    nama_toko: 'Loodfie Market', 
+    deskripsi: 'Pusat Produk Digital Terlengkap',
+    header_bg: null,
+    font_style: 'Inter'
+  });
+  
   const [user, setUser] = useState<any>(null);
   const [scrolled, setScrolled] = useState(false);
-  
-  // ⚠️ GANTI EMAIL INI DENGAN EMAIL LOGIN KAMU! 👇
-  const emailBos = "pordjox75@gmail.com"; 
-
-  // State Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedKategori, setSelectedKategori] = useState('Semua');
+
+  // ⚠️ EMAIL BOS PERMANEN SESUAI REQUEST
+  const emailBos = "pordjox75@gmail.com"; 
 
   const router = useRouter();
 
@@ -35,15 +41,24 @@ export default function Home() {
       const { data: dataToko } = await supabase.from('toko').select('*').single();
       if (dataToko) setToko(dataToko);
     }
-
     initData();
 
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // --- DAFTAR FONT LENGKAP ---
+  const fontMap: any = {
+    'Inter': 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap',
+    'Poppins': 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700;900&display=swap',
+    'Playfair Display': 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&display=swap',
+    'Roboto Mono': 'https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap',
+    'Lobster': 'https://fonts.googleapis.com/css2?family=Lobster&display=swap',
+    'Dancing Script': 'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap',
+    'Oswald': 'https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap',
+    'Montserrat': 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap',
+  };
 
   // Logika Filter
   useEffect(() => {
@@ -52,83 +67,81 @@ export default function Home() {
       hasil = hasil.filter(item => item.kategori && item.kategori.toLowerCase() === selectedKategori.toLowerCase());
     }
     if (searchTerm) {
-      hasil = hasil.filter(item => 
-        item.nama_produk.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.deskripsi && item.deskripsi.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      hasil = hasil.filter(item => item.nama_produk.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     setFilteredProduk(hasil);
   }, [searchTerm, selectedKategori, produk]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setUser(null);
-    router.refresh();
-    alert("Berhasil Keluar!"); 
+    setUser(null); router.refresh(); alert("Berhasil Keluar!"); 
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
+    <div className="min-h-screen bg-gray-50 text-gray-900" style={{ fontFamily: `"${toko.font_style}", sans-serif` }}>
       
+      {/* Inject Font CSS */}
+      <style jsx global>{`
+        @import url('${fontMap[toko.font_style] || fontMap['Inter']}');
+      `}</style>
+
       {/* NAVBAR */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/80 backdrop-blur-md shadow-sm py-4' : 'bg-transparent py-6'}`}>
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-4' : 'bg-transparent py-6'}`}>
         <div className="container mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
-            <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">L</div>
-            <span className={`text-xl font-bold tracking-tight ${scrolled ? 'text-gray-900' : 'text-white'}`}>
+            <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-white font-bold text-xl shadow border border-white/20">L</div>
+            <span className={`text-xl font-bold tracking-tight ${scrolled ? 'text-gray-900' : 'text-white drop-shadow-md'}`}>
               {toko.nama_toko}
             </span>
           </div>
 
           <div className="flex items-center gap-3">
+            {user?.email === emailBos && (
+                <Link href="/admin" className="hidden md:flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-lg hover:bg-gray-700 transition">⚙️ Admin</Link>
+            )}
             {user ? (
-              <>
-                {/* TOMBOL RAHASIA ADMIN */}
-                {user.email === emailBos && (
-                    <Link href="/admin" className="hidden md:flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-lg hover:bg-gray-700 transition transform hover:scale-105 border border-gray-700">
-                        ⚙️ Admin Panel
-                    </Link>
-                )}
-
-                <Link href="/dashboard" className="hidden md:flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur px-5 py-2.5 rounded-full border border-white/20 transition group shadow-lg">
-                    <span className={`text-sm font-bold ${scrolled ? 'text-gray-800' : 'text-white'}`}>Dashboard</span>
-                </Link>
-                
-                <button onClick={handleLogout} className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-lg transition transform hover:scale-105">
-                    Keluar 🚪
-                </button>
-              </>
+               <>
+                <Link href="/dashboard" className="hidden md:flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur px-5 py-2.5 rounded-full border border-white/20 transition text-white font-bold text-sm">Dashboard</Link>
+                <button onClick={handleLogout} className="bg-red-500 text-white px-5 py-2.5 rounded-full font-bold text-sm shadow hover:bg-red-600 transition">Keluar</button>
+               </>
             ) : (
-              <div className="flex gap-3">
-                 <Link href="/masuk" className={`px-5 py-2.5 rounded-full font-bold text-sm transition ${scrolled ? 'text-gray-600 hover:text-blue-600' : 'text-white/90 hover:text-white'}`}>Masuk</Link>
-                 <Link href="/daftar" className="bg-white text-blue-600 px-6 py-2.5 rounded-full font-bold text-sm hover:bg-blue-50 transition shadow-xl hover:scale-105 hover:shadow-blue-500/20">Daftar</Link>
-              </div>
+              <Link href="/masuk" className="bg-white text-blue-600 px-6 py-2.5 rounded-full font-bold text-sm shadow hover:scale-105 transition">Masuk</Link>
             )}
           </div>
         </div>
       </nav>
 
-      {/* HEADER */}
-      <header className="bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 text-white pt-40 pb-32 px-6 text-center relative overflow-hidden rounded-b-[3rem] shadow-2xl mb-12">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-white opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-cyan-300 opacity-20 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl"></div>
+      {/* HEADER DINAMIS */}
+      <header className="relative pt-40 pb-32 px-6 text-center overflow-hidden rounded-b-[3rem] shadow-2xl mb-12 bg-gray-900">
+        {toko.header_bg ? (
+            <>
+                <div className="absolute inset-0 z-0">
+                    <img src={toko.header_bg} alt="Header Background" className="w-full h-full object-cover opacity-80" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30 z-0"></div>
+            </>
+        ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 z-0">
+                 <div className="absolute top-0 left-0 w-96 h-96 bg-white opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl animate-pulse"></div>
+            </div>
+        )}
 
-        <div className="relative z-10 max-w-4xl mx-auto">
+        <div className="relative z-10 max-w-4xl mx-auto text-white">
           <span className="bg-white/20 backdrop-blur px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase mb-6 inline-block border border-white/30">
             Platform Digital No. #1
           </span>
-          <h1 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight leading-tight drop-shadow-sm">
+          <h1 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight leading-tight drop-shadow-lg">
             {toko.nama_toko}
           </h1>
-          <p className="text-blue-100 text-lg md:text-xl mb-10 font-light max-w-2xl mx-auto leading-relaxed">
-            {toko.deskripsi || 'Temukan ribuan aset digital, template, dan e-book berkualitas tinggi.'}
+          <p className="text-gray-100 text-lg md:text-xl mb-10 font-light max-w-2xl mx-auto leading-relaxed drop-shadow-md">
+            {toko.deskripsi}
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button onClick={() => document.getElementById('produk-area')?.scrollIntoView({ behavior: 'smooth' })} className="bg-white text-blue-700 px-8 py-4 rounded-full font-bold text-lg shadow-2xl hover:scale-105 hover:shadow-white/50 transition-all duration-300 flex items-center justify-center gap-2">
+            <button onClick={() => document.getElementById('produk-area')?.scrollIntoView({ behavior: 'smooth' })} className="bg-white text-gray-900 px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:scale-105 transition">
                 Mulai Belanja 🛍️
             </button>
-            <a href="https://wa.me/6285314445959" target="_blank" className="px-8 py-4 rounded-full font-bold text-lg border-2 border-white/30 hover:bg-white/10 transition flex items-center justify-center gap-2">
+            <a href="https://wa.me/6285314445959" target="_blank" className="px-8 py-4 rounded-full font-bold text-lg border-2 border-white/40 hover:bg-white/10 transition">
                 Hubungi Admin 📞
             </a>
           </div>
@@ -137,23 +150,12 @@ export default function Home() {
 
       {/* AREA PRODUK */}
       <div id="produk-area" className="container mx-auto px-6 py-12">
-        
-        {/* Search & Filter */}
         <div className="max-w-4xl mx-auto mb-12">
             <div className="bg-white p-4 rounded-2xl shadow-lg border border-gray-100 flex flex-col md:flex-row gap-4 items-center">
-                <div className="relative w-full md:w-1/2">
-                    <span className="absolute left-4 top-3.5 text-gray-400">🔍</span>
-                    <input 
-                        type="text" 
-                        placeholder="Cari produk apa hari ini?" 
-                        className="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-blue-500 transition outline-none"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-                <div className="flex gap-2 w-full md:w-1/2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                <input type="text" placeholder="Cari produk..." className="w-full pl-4 pr-4 py-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <div className="flex gap-2 w-full md:w-auto overflow-x-auto scrollbar-hide">
                     {['Semua', 'Ebook', 'Template', 'Source Code'].map((kat) => (
-                        <button key={kat} onClick={() => setSelectedKategori(kat)} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition ${selectedKategori === kat ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                        <button key={kat} onClick={() => setSelectedKategori(kat)} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition ${selectedKategori === kat ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
                             {kat}
                         </button>
                     ))}
@@ -161,62 +163,33 @@ export default function Home() {
             </div>
         </div>
 
-        {/* Daftar Produk */}
-        <div className="text-center mb-8">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
-             {searchTerm ? `Hasil Pencarian: "${searchTerm}"` : 'Katalog Produk 🔥'}
-          </h2>
-        </div>
-
         {filteredProduk.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
-                <span className="text-6xl mb-4 block">🤔</span>
-                <p className="text-gray-400 text-lg">{searchTerm ? `Tidak ada produk "${searchTerm}"` : 'Belum ada produk...'}</p>
-                <button onClick={() => {setSearchTerm(''); setSelectedKategori('Semua')}} className="mt-4 text-blue-600 font-bold hover:underline">Reset Pencarian</button>
+                <p className="text-gray-400 text-lg">Produk tidak ditemukan...</p>
             </div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProduk.map((item) => (
-                <div key={item.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border border-gray-100 overflow-hidden flex flex-col h-full">
-                
-                <div className="h-64 overflow-hidden relative bg-gray-100 flex items-center justify-center p-6">
-                    <div className="absolute top-4 left-4 z-10">
-                        <span className="bg-white/90 backdrop-blur text-blue-800 text-[10px] font-bold px-3 py-1 rounded-full shadow-sm border border-blue-100 uppercase tracking-wide">
-                        {item.kategori || 'Digital'}
-                        </span>
-                    </div>
-                    {item.gambar ? (
-                         <img src={item.gambar} alt={item.nama_produk} className="w-full h-full object-contain transform group-hover:scale-110 transition duration-700 ease-in-out" />
-                    ) : (
-                        <span className="text-6xl">📦</span>
-                    )}
-                </div>
-
-                <div className="p-8 flex flex-col flex-grow">
-                    <h3 className="text-2xl font-bold text-gray-800 mb-3 leading-tight group-hover:text-blue-600 transition line-clamp-2">
-                        {item.nama_produk}
-                    </h3>
-                    <p className="text-gray-500 text-sm mb-6 line-clamp-2 leading-relaxed flex-grow">
-                        {item.deskripsi || 'Deskripsi produk belum tersedia.'}
-                    </p>
-                    
-                    <div className="flex justify-between items-center pt-6 border-t border-gray-100 mt-auto">
-                        <div className="flex flex-col">
-                            <span className="text-xs text-gray-400 font-semibold uppercase">Harga</span>
-                            <span className="text-2xl font-extrabold text-blue-600">Rp {Number(item.harga).toLocaleString('id-ID')}</span>
+                {filteredProduk.map((item) => (
+                    <div key={item.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition overflow-hidden border border-gray-100 flex flex-col h-full">
+                        <div className="h-64 bg-gray-100 flex items-center justify-center relative overflow-hidden">
+                            <img src={item.gambar} alt={item.nama_produk} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" />
+                            <span className="absolute top-4 left-4 bg-white/90 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide shadow-sm">{item.kategori}</span>
                         </div>
-                        <Link href={`/produk/${item.id}`} className="bg-gray-900 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 hover:scale-110 hover:rotate-12 transition-all duration-300">
-                            ➜
-                        </Link>
+                        <div className="p-6 flex flex-col flex-grow">
+                            <h3 className="text-xl font-bold mb-2 group-hover:text-blue-600 transition">{item.nama_produk}</h3>
+                            <p className="text-gray-500 text-sm mb-4 line-clamp-2">{item.deskripsi}</p>
+                            <div className="mt-auto flex justify-between items-center pt-4 border-t border-gray-100">
+                                <span className="text-xl font-extrabold text-blue-600">Rp {Number(item.harga).toLocaleString('id-ID')}</span>
+                                <Link href={`/produk/${item.id}`} className="bg-gray-900 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-blue-600 transition shadow-lg">➜</Link>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                </div>
-            ))}
+                ))}
             </div>
         )}
       </div>
-
-      {/* FOOTER LENGKAP KEMBALI */}
+      
+      {/* --- FOOTER LENGKAP (IG, WA, BANK) --- */}
       <footer className="bg-gray-900 text-white pt-20 pb-10 mt-20 border-t-4 border-blue-500">
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
