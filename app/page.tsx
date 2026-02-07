@@ -22,7 +22,7 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedKategori, setSelectedKategori] = useState('Semua');
 
-  // ⚠️ EMAIL BOS PERMANEN SESUAI REQUEST
+  // ⚠️ EMAIL BOS PERMANEN
   const emailBos = "pordjox75@gmail.com"; 
 
   const router = useRouter();
@@ -154,7 +154,8 @@ export default function Home() {
             <div className="bg-white p-4 rounded-2xl shadow-lg border border-gray-100 flex flex-col md:flex-row gap-4 items-center">
                 <input type="text" placeholder="Cari produk..." className="w-full pl-4 pr-4 py-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 <div className="flex gap-2 w-full md:w-auto overflow-x-auto scrollbar-hide">
-                    {['Semua', 'Ebook', 'Template', 'Source Code'].map((kat) => (
+                    {/* 👇 TOMBOL VIDEO DITAMBAHKAN DI SINI 👇 */}
+                    {['Semua', 'Ebook', 'Template', 'Source Code', 'Video'].map((kat) => (
                         <button key={kat} onClick={() => setSelectedKategori(kat)} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition ${selectedKategori === kat ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
                             {kat}
                         </button>
@@ -189,7 +190,7 @@ export default function Home() {
         )}
       </div>
       
-      {/* --- FOOTER LENGKAP (IG, WA, BANK) --- */}
+      {/* --- FOOTER LENGKAP --- */}
       <footer className="bg-gray-900 text-white pt-20 pb-10 mt-20 border-t-4 border-blue-500">
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
