@@ -3,115 +3,210 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
-export default function UserDashboard() {
-  const [user, setUser] = useState<any>(null);
-  const [pesanan, setPesanan] = useState<any[]>([]); // Wadah riwayat pesanan
+export default function AdminPage() {
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
+  // State Form Produk
+  const [nama, setNama] = useState('');
+  const [harga, setHarga] = useState('');
+  const [deskripsi, setDeskripsi] = useState('');
+  const [kategori, setKategori] = useState('Ebook');
+  const [linkMayar, setLinkMayar] = useState('');
+  const [fileGambar, setFileGambar] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  // State Daftar Produk (Untuk Hapus)
+  const [daftarProduk, setDaftarProduk] = useState<any[]>([]);
+
+  // --- 1. CEK AUTH & AMBIL DATA PRODUK ---
   useEffect(() => {
-    async function init() {
-      // 1. Cek User Login
+    async function initAdmin() {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) { 
-        router.push('/masuk'); // Kalau belum login, lempar ke halaman masuk
-        return; 
+      // --- GANTI EMAIL INI DENGAN EMAIL LOGIN KAMU! 👇 ---
+      const emailBos = "pordjox75@gmail.com"; 
+
+      if (!session || session.user.email !== emailBos) {
+        alert("⛔ Akses Ditolak! Kamu bukan Admin.");
+        router.push('/');
+        return;
       }
       
-      setUser(session.user);
-
-      // 2. Ambil Riwayat Pesanan User Ini dari Database
-      const { data } = await supabase
-        .from('pesanan')
-        .select('*')
-        .eq('user_id', session.user.id) // Filter: Cuma ambil punya user ini
-        .order('id', { ascending: false }); // Urutkan dari yang terbaru
-      
-      setPesanan(data || []);
+      setIsAdmin(true);
+      ambilDaftarProduk(); // Ambil data produk saat masuk
       setLoading(false);
     }
-    init();
-  }, [router]);
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
+    initAdmin();
+  }, []);
+
+  // Fungsi Ambil Produk
+  async function ambilDaftarProduk() {
+    const { data } = await supabase.from('produk').select('*').order('id', { ascending: false });
+    if (data) setDaftarProduk(data);
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-gray-500">Memuat Data...</div>;
+  // --- 2. FUNGSI UPLOAD PRODUK (TAMBAH) ---
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUploading(true);
+
+    try {
+      let urlGambar = '';
+
+      if (fileGambar) {
+        const namaFileUnik = `${Date.now()}-${fileGambar.name}`;
+        // Upload ke Storage
+        const { error: errUpload } = await supabase.storage
+          .from('gambar-produk') 
+          .upload(namaFileUnik, fileGambar);
+
+        if (errUpload) throw errUpload;
+        
+        // Ambil Public URL
+        const { data: publicUrl } = supabase.storage
+          .from('gambar-produk')
+          .getPublicUrl(namaFileUnik);
+          
+        urlGambar = publicUrl.publicUrl;
+      }
+
+      // Masukkan ke Database
+      const { error: errorDb } = await supabase
+        .from('produk')
+        .insert([{
+            nama_produk: nama,
+            harga: Number(harga),
+            deskripsi: deskripsi,
+            kategori: kategori,
+            link_mayar: linkMayar,
+            gambar: urlGambar || 'https://via.placeholder.com/300'
+        }]);
+
+      if (errorDb) throw errorDb;
+
+      alert("✅ Produk Berhasil Ditambah!");
+      // Reset Form
+      setNama(''); setHarga(''); setDeskripsi(''); setLinkMayar(''); setFileGambar(null);
+      // Refresh Daftar Produk di Bawah
+      ambilDaftarProduk();
+
+    } catch (error: any) {
+      alert("❌ Gagal Upload: " + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // --- 3. FUNGSI HAPUS PRODUK (DELETE) ---
+  const handleHapus = async (id: number, namaProduk: string) => {
+    const yakin = confirm(`Yakin mau menghapus produk "${namaProduk}"? Data tidak bisa dikembalikan.`);
+    if (!yakin) return;
+
+    try {
+        const { error } = await supabase.from('produk').delete().eq('id', id);
+        if (error) throw error;
+
+        alert("🗑️ Produk berhasil dihapus!");
+        ambilDaftarProduk(); // Refresh daftar biar hilang dari layar
+
+    } catch (error: any) {
+        alert("Gagal hapus: " + error.message);
+    }
+  };
+
+  if (loading) return <p className="text-center p-10">Memeriksa izin akses...</p>;
+  if (!isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 font-sans">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-gray-100 py-12 px-4 md:px-8">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* HEADER DASHBOARD */}
-        <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl shadow-lg">👤</div>
-                <div>
-                    {/* Ambil nama dari email (sebelum tanda @) */}
-                    <h1 className="text-2xl font-bold text-gray-800">Halo, {user?.email?.split('@')[0]}! 👋</h1>
-                    <p className="text-gray-500 text-sm">{user?.email}</p>
-                </div>
+        {/* --- KOLOM KIRI: FORM TAMBAH PRODUK --- */}
+        <div className="lg:col-span-1">
+            <div className="bg-white p-6 rounded-3xl shadow-xl sticky top-24">
+                <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-4">➕ Tambah Produk</h2>
+                <form onSubmit={handleUpload} className="space-y-4">
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase">Nama Produk</label>
+                        <input type="text" required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500" value={nama} onChange={(e) => setNama(e.target.value)} />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase">Harga (Rp)</label>
+                        <input type="number" required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500" value={harga} onChange={(e) => setHarga(e.target.value)} />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase">Kategori</label>
+                        <select className="w-full p-2 border rounded-lg bg-white" value={kategori} onChange={(e) => setKategori(e.target.value)}>
+                            <option value="Ebook">Ebook</option>
+                            <option value="Template">Template</option>
+                            <option value="Source Code">Source Code</option>
+                            <option value="Video">Video Course</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase">Deskripsi</label>
+                        <textarea rows={3} className="w-full p-2 border rounded-lg" value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)}></textarea>
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase">Link Mayar/Google</label>
+                        <input type="text" className="w-full p-2 border rounded-lg" value={linkMayar} onChange={(e) => setLinkMayar(e.target.value)} />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase">Foto</label>
+                        <input type="file" accept="image/*" className="w-full text-sm" onChange={(e) => setFileGambar(e.target.files ? e.target.files[0] : null)} />
+                    </div>
+                    <button type="submit" disabled={uploading} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg">
+                        {uploading ? 'Sedang Upload... ⏳' : 'Upload Sekarang 🚀'}
+                    </button>
+                </form>
             </div>
-            <button onClick={handleLogout} className="bg-white text-red-500 border border-red-200 px-6 py-2 rounded-lg font-bold hover:bg-red-50 transition shadow-sm">
-                Keluar 🚪
-            </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* KOLOM KIRI: RIWAYAT PESANAN */}
-            <div className="lg:col-span-2">
-                <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    📦 Riwayat Pesanan
-                    <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">{pesanan.length}</span>
+        {/* --- KOLOM KANAN: DAFTAR PRODUK (MANAGEMENT) --- */}
+        <div className="lg:col-span-2">
+            <div className="bg-white p-8 rounded-3xl shadow-xl">
+                <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-4 flex justify-between items-center">
+                    📦 Kelola Produk
+                    <span className="text-sm font-normal bg-gray-100 px-3 py-1 rounded-full text-gray-500">{daftarProduk.length} Item</span>
                 </h2>
 
                 <div className="space-y-4">
-                    {pesanan.length === 0 ? (
-                        <div className="bg-white p-8 rounded-2xl border border-dashed border-gray-300 text-center">
-                            <p className="text-gray-400">Belum ada pesanan. Yuk belanja!</p>
-                        </div>
+                    {daftarProduk.length === 0 ? (
+                        <p className="text-center text-gray-400 py-10">Belum ada produk. Upload dulu dong bos! 😎</p>
                     ) : (
-                        pesanan.map((item) => (
-                            <div key={item.id} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition flex flex-col md:flex-row justify-between items-center gap-4">
-                                <div>
-                                    <h3 className="font-bold text-gray-800 text-lg">{item.nama_produk}</h3>
-                                    <p className="text-sm text-gray-500">
-                                        {new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                    </p>
+                        daftarProduk.map((item) => (
+                            <div key={item.id} className="flex items-center gap-4 p-4 border rounded-2xl hover:bg-gray-50 transition bg-white">
+                                {/* Gambar Kecil */}
+                                <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                                    {item.gambar && <img src={item.gambar} alt={item.nama_produk} className="w-full h-full object-cover" />}
                                 </div>
-                                <div className="text-right flex flex-col items-end gap-1">
-                                    <span className="font-bold text-blue-600">Rp {Number(item.harga).toLocaleString('id-ID')}</span>
-                                    <span className="bg-yellow-100 text-yellow-700 text-xs px-3 py-1 rounded-full font-bold">
-                                        {item.status}
-                                    </span>
+                                
+                                {/* Info Produk */}
+                                <div className="flex-grow">
+                                    <h3 className="font-bold text-gray-800">{item.nama_produk}</h3>
+                                    <p className="text-sm text-gray-500">Rp {Number(item.harga).toLocaleString('id-ID')} • {item.kategori}</p>
+                                </div>
+
+                                {/* Tombol Aksi */}
+                                <div className="flex gap-2">
+                                    {/* Tombol Hapus */}
+                                    <button 
+                                        onClick={() => handleHapus(item.id, item.nama_produk)}
+                                        className="bg-red-100 text-red-600 p-3 rounded-xl hover:bg-red-600 hover:text-white transition shadow-sm"
+                                        title="Hapus Produk"
+                                    >
+                                        🗑️
+                                    </button>
                                 </div>
                             </div>
                         ))
                     )}
                 </div>
             </div>
-
-            {/* KOLOM KANAN: TOMBOL BELANJA LAGI */}
-            <div>
-                <Link href="/" className="block bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-2xl shadow-xl text-white hover:scale-[1.02] transition relative overflow-hidden group">
-                    <div className="relative z-10">
-                        <h3 className="text-2xl font-bold mb-1">Belanja Lagi? 🛒</h3>
-                        <p className="text-blue-200 text-sm">Cek produk terbaru kami sekarang.</p>
-                    </div>
-                    {/* Hiasan Icon Transparan */}
-                    <div className="absolute right-0 bottom-0 opacity-20 transform translate-x-4 translate-y-4">
-                        <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
-                    </div>
-                </Link>
-            </div>
-
         </div>
 
       </div>
