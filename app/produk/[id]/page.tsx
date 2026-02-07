@@ -11,6 +11,7 @@ export default function DetailProduk() {
 
   const [produk, setProduk] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [prosesBeli, setProsesBeli] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -34,6 +35,48 @@ export default function DetailProduk() {
     getProduk();
   }, [idProduk]);
 
+  // --- FUNGSI BELI & BAYAR (DIRECT TO MAYAR) ---
+  const handleBeli = async () => {
+    setProsesBeli(true);
+
+    // 1. Cek Login
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+        alert("Silakan Login atau Daftar dulu untuk membeli produk ini.");
+        router.push('/masuk');
+        return;
+    }
+
+    // 2. Cek Link Mayar
+    if (!produk.link_mayar) {
+        alert("Maaf, link pembayaran untuk produk ini belum disetting admin.");
+        setProsesBeli(false);
+        return;
+    }
+
+    // 3. Catat Pesanan
+    const pesananBaru = {
+        user_id: session.user.id,
+        nama_produk: produk.nama || produk.nama_produk,
+        harga: produk.harga,
+        status: 'Menunggu Pembayaran',
+        tanggal: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+        .from('pesanan')
+        .insert([pesananBaru]);
+
+    if (error) {
+        alert("Gagal membuat pesanan: " + error.message);
+        setProsesBeli(false);
+    } else {
+        // 4. Redirect ke Link Mayar
+        window.location.href = produk.link_mayar;
+    }
+  };
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-pulse flex flex-col items-center">
@@ -51,10 +94,7 @@ export default function DetailProduk() {
     </div>
   );
 
-  // --- BAGIAN PENTING: Penyelamat Nama ---
-  // Kita buat variabel baru yang mengecek kedua kemungkinan nama
   const namaProduk = produk.nama || produk.nama_produk || 'Produk Tanpa Nama';
-  // ----------------------------------------
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -80,7 +120,6 @@ export default function DetailProduk() {
                 </div>
 
                 <div className="p-8 md:p-12 lg:p-16 flex flex-col justify-center">
-                    {/* Judul Produk (Sekarang pakai variabel aman) */}
                     <h1 className="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
                         {namaProduk}
                     </h1>
@@ -100,7 +139,7 @@ export default function DetailProduk() {
                     </div>
 
                     <div className="flex flex-col gap-4">
-                        {/* Tombol WA dengan Nama yang Benar */}
+                        {/* 🟢 TOMBOL WA SUDAH DIPERBARUI NOMORNYA */}
                         <a 
                             href={`https://wa.me/6285314445959?text=Halo%2C%20saya%20tertarik%20beli%20${encodeURIComponent(namaProduk)}`} 
                             target="_blank"
@@ -110,10 +149,11 @@ export default function DetailProduk() {
                         </a>
 
                         <button 
-                            onClick={() => alert('Fitur Checkout Otomatis akan segera hadir!')}
-                            className="w-full bg-gradient-to-r from-blue-600 to-blue-800 text-white py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-blue-500/30 transition transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                            onClick={handleBeli}
+                            disabled={prosesBeli}
+                            className="w-full bg-gradient-to-r from-blue-600 to-blue-800 text-white py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-blue-500/30 transition transform hover:-translate-y-1 flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
                         >
-                            <span>🚀 Beli Sekarang (Instant)</span>
+                            {prosesBeli ? 'Mengalihkan ke Pembayaran... 💸' : '🚀 Beli Sekarang (Instant)'}
                         </button>
                     </div>
 
