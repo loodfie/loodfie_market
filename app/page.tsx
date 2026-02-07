@@ -12,7 +12,7 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [scrolled, setScrolled] = useState(false);
   
-  // --- GANTI EMAIL INI DENGAN EMAIL LOGIN KAMU! 👇 ---
+  // ⚠️ GANTI EMAIL INI DENGAN EMAIL LOGIN KAMU! 👇
   const emailBos = "pordjox75@gmail.com"; 
 
   // State Search & Filter
@@ -83,7 +83,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             {user ? (
               <>
-                {/* TOMBOL RAHASIA ADMIN (Hanya Muncul untuk Bos) */}
+                {/* TOMBOL RAHASIA ADMIN */}
                 {user.email === emailBos && (
                     <Link href="/admin" className="hidden md:flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-lg hover:bg-gray-700 transition transform hover:scale-105 border border-gray-700">
                         ⚙️ Admin Panel
@@ -216,13 +216,64 @@ export default function Home() {
         )}
       </div>
 
-      {/* Footer */}
+      {/* FOOTER LENGKAP KEMBALI */}
       <footer className="bg-gray-900 text-white pt-20 pb-10 mt-20 border-t-4 border-blue-500">
         <div className="container mx-auto px-6">
-           {/* (Isi Footer sama seperti sebelumnya) */}
-           <div className="text-center text-gray-500 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
+            
+            {/* Kolom 1: Brand & Sosmed */}
+            <div>
+              <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span className="bg-gradient-to-br from-blue-600 to-cyan-500 text-white w-10 h-10 rounded-lg flex items-center justify-center text-lg shadow-lg">L</span>
+                {toko.nama_toko}
+              </h3>
+              <p className="text-gray-400 leading-relaxed mb-8 pr-4">
+                Platform jual beli produk digital terpercaya. Semua produk garansi akses selamanya.
+              </p>
+              <div className="flex gap-4">
+                <a href="#" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-pink-600 hover:text-white transition cursor-pointer shadow-lg">IG</a>
+                <a href="#" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition cursor-pointer shadow-lg">FB</a>
+                <a href="https://wa.me/6285314445959" target="_blank" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-green-500 hover:text-white transition cursor-pointer shadow-lg">WA</a>
+              </div>
+            </div>
+
+            {/* Kolom 2: Menu */}
+            <div>
+              <h4 className="text-lg font-bold mb-6 text-blue-400 uppercase tracking-wider">Menu Pintas</h4>
+              <ul className="space-y-4 text-gray-400">
+                <li><Link href="/" className="hover:text-white transition flex items-center gap-2 hover:translate-x-1 duration-200">🏠 Beranda</Link></li>
+                <li><button onClick={() => document.getElementById('produk-area')?.scrollIntoView({behavior: 'smooth'})} className="hover:text-white transition flex items-center gap-2 hover:translate-x-1 duration-200 text-left">🛍️ Katalog Produk</button></li>
+                <li><Link href="/dashboard" className="hover:text-white transition flex items-center gap-2 hover:translate-x-1 duration-200">👤 Member Area</Link></li>
+                <li><a href="https://wa.me/6285314445959" target="_blank" className="hover:text-green-400 transition flex items-center gap-2 hover:translate-x-1 duration-200">📞 Hubungi Kami</a></li>
+              </ul>
+            </div>
+
+            {/* Kolom 3: Pembayaran & Keamanan */}
+            <div>
+              <h4 className="text-lg font-bold mb-6 text-blue-400 uppercase tracking-wider">Metode Pembayaran</h4>
+              <div className="flex flex-wrap gap-2 mb-6">
+                {['BCA', 'Mandiri', 'BRI', 'DANA', 'OVO', 'Gopay', 'QRIS'].map((bank) => (
+                    <span key={bank} className="bg-white text-blue-900 px-3 py-1.5 rounded-md font-bold text-xs shadow-sm cursor-default hover:bg-blue-50 transition">
+                        {bank}
+                    </span>
+                ))}
+              </div>
+              <div className="p-5 bg-gray-800/50 rounded-xl border border-gray-700 flex items-center gap-4">
+                <span className="text-3xl">🔒</span>
+                <div>
+                  <p className="text-sm font-bold text-gray-200">Jaminan Keamanan 100%</p>
+                  <p className="text-xs text-gray-500 mt-1">Transaksi terenkripsi & data privasi terjaga.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-800 pt-8 text-center">
+            <p className="text-gray-500 text-sm">
               &copy; {new Date().getFullYear()} <span className="text-white font-bold">{toko.nama_toko}</span>. All rights reserved.
-           </div>
+            </p>
+            <p className="text-gray-600 text-xs mt-2 opacity-50">Designed with ❤️ by Loodfie Tech</p>
+          </div>
         </div>
       </footer>
     </div>
