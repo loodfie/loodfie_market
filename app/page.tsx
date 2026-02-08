@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
-// 👇 IMPORT KOMPONEN BARU
 import FloatingWA from './components/FloatingWA';
 
 export default function Home() {
@@ -82,10 +81,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900" style={{ fontFamily: `"${toko.font_style}", sans-serif` }}>
       <Toaster position="bottom-left" />
-      
-      {/* 👇 PASANG TOMBOL WA DISINI */}
       <FloatingWA />
-
       <style jsx global>{` @import url('${fontMap[toko.font_style] || fontMap['Inter']}'); `}</style>
 
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-2.5' : 'bg-transparent py-4'}`}>
@@ -123,10 +119,12 @@ export default function Home() {
           <span className="bg-white/20 backdrop-blur px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase mb-3 inline-block border border-white/30">Platform Digital No. #1</span>
           <h1 className="text-2xl md:text-4xl font-extrabold mb-3 tracking-tight leading-tight drop-shadow-lg">{toko.nama_toko}</h1>
           <p className="text-gray-100 text-sm md:text-base mb-6 font-light max-w-xl mx-auto leading-relaxed drop-shadow-md">{toko.deskripsi}</p>
+          
+          {/* 👇 TOMBOL DI HEADER TINGGAL SATU */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button onClick={() => document.getElementById('produk-area')?.scrollIntoView({ behavior: 'smooth' })} className="bg-white text-gray-900 px-5 py-2.5 rounded-full font-bold text-sm shadow-xl hover:scale-105 transition">Mulai Belanja 🛍️</button>
-            <a href="https://wa.me/6285314445959" target="_blank" className="px-5 py-2.5 rounded-full font-bold text-sm border-2 border-white/40 hover:bg-white/10 transition">Hubungi Admin 📞</a>
           </div>
+
         </div>
       </header>
 
@@ -178,15 +176,18 @@ export default function Home() {
                 <a href="https://wa.me/6285314445959" target="_blank" className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center hover:bg-green-500 hover:text-white transition cursor-pointer shadow border border-gray-700 text-[10px]">WA</a>
               </div>
             </div>
+            
+            {/* 👇 BAGIAN MENU PINTAS DI FOOTER */}
             <div>
               <h4 className="text-sm font-bold mb-3 text-blue-400 uppercase tracking-wider">Menu Pintas</h4>
               <ul className="space-y-2 text-gray-300 text-sm">
                 <li><Link href="/" className="hover:text-white transition flex items-center gap-2">🏠 Beranda</Link></li>
                 <li><button onClick={() => document.getElementById('produk-area')?.scrollIntoView({behavior: 'smooth'})} className="hover:text-white transition flex items-center gap-2 text-left">🛍️ Katalog Produk</button></li>
                 <li><Link href="/dashboard" className="hover:text-white transition flex items-center gap-2">👤 Member Area</Link></li>
-                <li><a href="https://wa.me/6285314445959" target="_blank" className="hover:text-green-400 transition flex items-center gap-2">📞 Hubungi Kami</a></li>
+                {/* Link Hubungi Kami di sini sudah DIHAPUS */}
               </ul>
             </div>
+
             <div>
               <h4 className="text-sm font-bold mb-3 text-blue-400 uppercase tracking-wider">Metode Pembayaran</h4>
               <div className="flex flex-wrap gap-1 mb-3">
