@@ -2,261 +2,202 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function DetailProduk() {
-  const params = useParams(); 
-  const idProduk = params?.id; 
-
-  const [produk, setProduk] = useState<any>(null);
-  const [ulasan, setUlasan] = useState<any[]>([]); // Data ulasan
-  const [loading, setLoading] = useState(true);
-  const [prosesBeli, setProsesBeli] = useState(false);
-  
-  // State Form Ulasan
-  const [komentarBaru, setKomentarBaru] = useState('');
-  const [bintangBaru, setBintangBaru] = useState(5);
-  const [user, setUser] = useState<any>(null);
-
+  const params = useParams();
   const router = useRouter();
+  const [produk, setProduk] = useState<any>(null);
+  const [related, setRelated] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Data Toko (Untuk Font & Style Footer)
+  const [toko, setToko] = useState({ 
+    nama_toko: 'Loodfie Market', 
+    footer_bg: null,
+    font_style: 'Inter'
+  });
 
+  // Ambil Data Produk & Toko
   useEffect(() => {
-    async function initData() {
-      if (!idProduk) return;
+    async function getData() {
+      // 1. Ambil Settingan Toko
+      const { data: dataToko } = await supabase.from('toko').select('*').single();
+      if (dataToko) setToko(dataToko);
 
-      // 1. Cek User Login
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
-
-      // 2. Ambil Data Produk
+      // 2. Ambil Detail Produk Utama
       const { data: dataProduk, error } = await supabase
         .from('produk')
         .select('*')
-        .eq('id', idProduk)
+        .eq('id', params.id)
         .single();
-      
-      if (dataProduk) setProduk(dataProduk);
 
-      // 3. Ambil Data Ulasan
-      const { data: dataUlasan } = await supabase
-        .from('ulasan')
+      if (error || !dataProduk) {
+        setLoading(false);
+        return; // Produk tidak ditemukan
+      }
+
+      setProduk(dataProduk);
+
+      // 3. Ambil Produk Serupa (Kategori Sama, tapi bukan produk ini)
+      const { data: dataRelated } = await supabase
+        .from('produk')
         .select('*')
-        .eq('produk_id', idProduk)
-        .order('created_at', { ascending: false });
-
-      if (dataUlasan) setUlasan(dataUlasan);
-
+        .eq('kategori', dataProduk.kategori)
+        .neq('id', params.id) // Jangan tampilkan produk yang sedang dibuka
+        .limit(5); // Ambil maksimal 5 rekomendasi
+      
+      if (dataRelated) setRelated(dataRelated);
+      
       setLoading(false);
     }
 
-    initData();
-  }, [idProduk]);
+    getData();
+  }, [params.id]);
 
-  // --- KIRIM ULASAN ---
-  const handleKirimUlasan = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) {
-        alert("Silakan login dulu untuk memberi ulasan.");
-        router.push('/masuk');
-        return;
-    }
-    if (!komentarBaru) return;
-
-    const ulasanBaru = {
-        produk_id: idProduk,
-        nama_user: user.email.split('@')[0], // Pakai nama depan email
-        bintang: bintangBaru,
-        komentar: komentarBaru,
-        created_at: new Date().toISOString()
-    };
-
-    const { error } = await supabase.from('ulasan').insert([ulasanBaru]);
-
-    if (error) {
-        alert("Gagal kirim ulasan: " + error.message);
+  // Handle Tombol Beli
+  const handleBeli = () => {
+    if (!produk) return;
+    // Kalau ada link mayar, buka link mayar. Kalau kosong, ke WA.
+    if (produk.link_mayar) {
+      window.open(produk.link_mayar, '_blank');
     } else {
-        alert("Terima kasih atas ulasannya! ⭐");
-        setKomentarBaru('');
-        // Refresh data ulasan manual biar langsung muncul
-        setUlasan([ulasanBaru, ...ulasan]);
+      const text = `Halo Admin, saya mau beli produk: ${produk.nama_produk}`;
+      window.open(`https://wa.me/6285314445959?text=${encodeURIComponent(text)}`, '_blank');
     }
   };
 
-  const handleBeli = async () => {
-    setProsesBeli(true);
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-        alert("Silakan Login atau Daftar dulu untuk membeli produk ini.");
-        router.push('/masuk');
-        return;
-    }
-
-    if (!produk.link_mayar) {
-        alert("Maaf, link pembayaran belum disetting admin.");
-        setProsesBeli(false);
-        return;
-    }
-
-    const pesananBaru = {
-        user_id: session.user.id,
-        nama_produk: produk.nama || produk.nama_produk,
-        harga: produk.harga,
-        status: 'Menunggu Pembayaran',
-        tanggal: new Date().toISOString()
-    };
-
-    const { error } = await supabase.from('pesanan').insert([pesananBaru]);
-
-    if (error) {
-        alert("Gagal membuat pesanan: " + error.message);
-        setProsesBeli(false);
-    } else {
-        window.location.href = produk.link_mayar;
-    }
+  // --- DAFTAR FONT (Biar sinkron sama Home) ---
+  const fontMap: any = {
+    'Inter': 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap',
+    'Poppins': 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700;900&display=swap',
+    'Playfair Display': 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&display=swap',
+    'Roboto Mono': 'https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap',
+    'Lobster': 'https://fonts.googleapis.com/css2?family=Lobster&display=swap',
+    'Dancing Script': 'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap',
+    'Oswald': 'https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap',
+    'Montserrat': 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap',
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-pulse flex flex-col items-center">
-            <div className="h-12 w-12 bg-blue-200 rounded-full mb-4"></div>
-            <p className="text-gray-400 text-sm">Sedang mengambil data...</p>
-        </div>
-    </div>
-  );
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><p className="animate-pulse text-gray-400 font-bold">Memuat Produk...</p></div>;
 
   if (!produk) return (
-    <div className="min-h-screen flex flex-col items-center justify-center text-center p-6">
-        <h1 className="text-4xl mb-4">😢</h1>
-        <h2 className="text-xl font-bold text-gray-800">Produk Tidak Ditemukan</h2>
-        <Link href="/" className="mt-6 text-blue-600 hover:underline">Kembali ke Beranda</Link>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-center px-4">
+      <h1 className="text-4xl mb-4">😢</h1>
+      <h2 className="text-2xl font-bold text-gray-800 mb-2">Produk Tidak Ditemukan</h2>
+      <p className="text-gray-500 mb-6">Mungkin produk ini sudah dihapus atau link salah.</p>
+      <Link href="/" className="bg-blue-600 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:bg-blue-700 transition">Kembali ke Beranda</Link>
     </div>
   );
 
-  const namaProduk = produk.nama || produk.nama_produk || 'Produk Tanpa Nama';
-  
-  // Hitung Rata-rata Bintang
-  const rataBintang = ulasan.length > 0 
-    ? (ulasan.reduce((acc, curr) => acc + curr.bintang, 0) / ulasan.length).toFixed(1) 
-    : '0.0';
-
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        
-        <button onClick={() => router.back()} className="mb-8 flex items-center text-gray-500 hover:text-blue-600 transition group">
-            <span className="bg-white p-2 rounded-full shadow-sm mr-3 group-hover:-translate-x-1 transition">←</span>
-            Kembali ke Katalog
-        </button>
+    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans" style={{ fontFamily: `"${toko.font_style}", sans-serif` }}>
+      
+      {/* Inject Font CSS */}
+      <style jsx global>{` @import url('${fontMap[toko.font_style] || fontMap['Inter']}'); `}</style>
 
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 mb-12">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-                <div className="relative bg-gray-100 h-96 lg:h-auto flex items-center justify-center p-10 group overflow-hidden">
-                    <img src={produk.gambar} alt={namaProduk} className="max-h-full max-w-full object-contain drop-shadow-2xl transform group-hover:scale-105 transition duration-500 ease-in-out" />
+      {/* NAVBAR SIMPLE (Tombol Kembali) */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md shadow-sm py-4">
+        <div className="container mx-auto px-6 flex justify-between items-center">
+            <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition font-bold text-sm">
+                ⬅️ Kembali
+            </Link>
+            <span className="font-bold text-lg tracking-tight">{toko.nama_toko}</span>
+            <div className="w-10"></div> {/* Spacer biar tengah */}
+        </div>
+      </nav>
+
+      <main className="container mx-auto px-4 pt-28 pb-12">
+        
+        {/* --- DETAIL PRODUK --- */}
+        <div className="bg-white rounded-[2rem] shadow-xl overflow-hidden border border-gray-100 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2">
+                
+                {/* Kolom Kiri: Gambar Besar */}
+                <div className="bg-gray-100 h-[400px] md:h-[500px] flex items-center justify-center relative p-8">
+                    {produk.gambar ? (
+                        <img src={produk.gambar} alt={produk.nama_produk} className="w-full h-full object-contain drop-shadow-2xl hover:scale-105 transition duration-500" />
+                    ) : (
+                        <span className="text-6xl">📦</span>
+                    )}
+                    <span className="absolute top-6 left-6 bg-white/90 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide shadow-sm border border-gray-200">
+                        {produk.kategori}
+                    </span>
                 </div>
 
-                <div className="p-8 md:p-12 lg:p-16 flex flex-col justify-center">
-                    <div className="flex items-center gap-2 mb-4">
-                        <span className="text-yellow-400 text-xl">⭐</span>
-                        <span className="font-bold text-gray-900">{rataBintang}</span>
-                        <span className="text-gray-400 text-sm">({ulasan.length} Ulasan)</span>
-                    </div>
-
-                    <h1 className="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
-                        {namaProduk}
+                {/* Kolom Kanan: Info & Beli */}
+                <div className="p-8 md:p-12 flex flex-col justify-center">
+                    <h1 className="text-3xl md:text-4xl font-extrabold mb-4 text-gray-900 leading-tight">
+                        {produk.nama_produk}
                     </h1>
                     
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-bold text-2xl">
-                            Rp {Number(produk.harga).toLocaleString('id-ID')}
-                        </div>
-                        <div className="flex items-center text-green-600 text-sm font-semibold">
-                            <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-                            Tersedia Instant
-                        </div>
+                    <div className="text-3xl font-extrabold text-blue-600 mb-8">
+                        Rp {Number(produk.harga).toLocaleString('id-ID')}
                     </div>
 
-                    <div className="prose prose-blue text-gray-600 mb-10 leading-relaxed">
-                        <p>{produk.deskripsi || 'Produk berkualitas siap pakai.'}</p>
+                    <div className="prose prose-sm text-gray-500 mb-10 leading-relaxed whitespace-pre-line">
+                        {produk.deskripsi || "Tidak ada deskripsi untuk produk ini."}
                     </div>
 
-                    <div className="flex flex-col gap-4">
-                        <a href={`https://wa.me/6285314445959?text=Halo%2C%20saya%20tertarik%20beli%20${encodeURIComponent(namaProduk)}`} target="_blank" className="w-full bg-green-500 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-600 transition transform hover:-translate-y-1 text-center flex items-center justify-center gap-2">
-                            <span>WhatsApp (Tanya Dulu)</span>
-                        </a>
-                        <button onClick={handleBeli} disabled={prosesBeli} className="w-full bg-gradient-to-r from-blue-600 to-blue-800 text-white py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-blue-500/30 transition transform hover:-translate-y-1 flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                            {prosesBeli ? 'Mengalihkan ke Pembayaran... 💸' : '🚀 Beli Sekarang (Instant)'}
+                    <div className="mt-auto space-y-4">
+                        <button 
+                            onClick={handleBeli}
+                            className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg shadow-xl hover:bg-blue-700 hover:shadow-blue-500/30 transition transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                        >
+                            🛒 Beli Sekarang
                         </button>
+                        <p className="text-center text-xs text-gray-400">
+                            *Produk digital dikirim otomatis setelah pembayaran.
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
 
-        {/* --- KOLOM ULASAN (BARU) --- */}
-        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8 md:p-12">
-            <h3 className="text-2xl font-bold mb-8 flex items-center gap-3">
-                Ulasan Pembeli <span className="text-gray-400 text-lg font-normal">({ulasan.length})</span>
-            </h3>
-
-            {/* Form Input Ulasan */}
-            {user ? (
-                <form onSubmit={handleKirimUlasan} className="mb-12 bg-gray-50 p-6 rounded-2xl border border-gray-200">
-                    <h4 className="font-bold mb-4 text-gray-700">Tulis Ulasan Kamu</h4>
-                    <div className="flex items-center gap-4 mb-4">
-                        <label className="text-sm text-gray-500">Rating:</label>
-                        <div className="flex gap-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                                <button key={star} type="button" onClick={() => setBintangBaru(star)} className={`text-2xl transition ${star <= bintangBaru ? 'text-yellow-400 scale-110' : 'text-gray-300'}`}>★</button>
-                            ))}
-                        </div>
-                    </div>
-                    <textarea 
-                        required
-                        className="w-full p-4 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none mb-4 bg-white"
-                        placeholder="Bagaimana pendapatmu tentang produk ini?"
-                        rows={3}
-                        value={komentarBaru}
-                        onChange={(e) => setKomentarBaru(e.target.value)}
-                    ></textarea>
-                    <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg">
-                        Kirim Ulasan 🚀
-                    </button>
-                </form>
-            ) : (
-                <div className="mb-12 p-6 bg-blue-50 rounded-2xl text-center border border-blue-100">
-                    <p className="text-blue-800 mb-2">Mau kasih ulasan?</p>
-                    <Link href="/masuk" className="text-blue-600 font-bold hover:underline">Login dulu yuk!</Link>
+        {/* --- PRODUK SERUPA (REKOMENDASI) --- */}
+        {related.length > 0 && (
+            <div className="mt-20 max-w-5xl mx-auto">
+                <h3 className="text-2xl font-bold mb-8 flex items-center gap-3">
+                    ✨ Produk Serupa
+                    <span className="text-sm font-normal text-gray-500 bg-white px-3 py-1 rounded-full shadow-sm">Rekomendasi</span>
+                </h3>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {related.map((item) => (
+                        <Link href={`/produk/${item.id}`} key={item.id} className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100 flex flex-col h-full">
+                             <div className="h-32 bg-gray-100 flex items-center justify-center relative overflow-hidden">
+                                <img src={item.gambar} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" />
+                                <span className="absolute top-2 left-2 bg-white/90 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide shadow-sm">{item.kategori}</span>
+                            </div>
+                            <div className="p-4 flex flex-col flex-grow">
+                                <h4 className="text-sm font-bold mb-1 group-hover:text-blue-600 line-clamp-2">{item.nama_produk}</h4>
+                                <p className="text-blue-600 font-extrabold text-sm mt-auto">Rp {Number(item.harga).toLocaleString('id-ID')}</p>
+                            </div>
+                        </Link>
+                    ))}
                 </div>
-            )}
-
-            {/* Daftar Ulasan */}
-            <div className="space-y-6">
-                {ulasan.length === 0 ? (
-                    <p className="text-center text-gray-400 italic py-8">Belum ada ulasan. Jadilah yang pertama mereview! 😎</p>
-                ) : (
-                    ulasan.map((rev, index) => (
-                        <div key={index} className="flex gap-4 p-4 hover:bg-gray-50 rounded-xl transition border-b border-gray-50 last:border-0">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                                {rev.nama_user?.charAt(0).toUpperCase() || 'U'}
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-bold text-gray-900">{rev.nama_user}</span>
-                                    <span className="text-yellow-400 text-sm">{'★'.repeat(rev.bintang)}</span>
-                                </div>
-                                <p className="text-gray-600 text-sm leading-relaxed">{rev.komentar}</p>
-                                <span className="text-xs text-gray-400 mt-2 block">
-                                    {new Date(rev.created_at).toLocaleDateString('id-ID')}
-                                </span>
-                            </div>
-                        </div>
-                    ))
-                )}
             </div>
-        </div>
+        )}
 
-      </div>
+      </main>
+
+      {/* --- FOOTER (SAMA SEPERTI HOME) --- */}
+      <footer className="relative bg-gray-900 text-white pt-10 pb-6 mt-20 border-t-4 border-blue-500 overflow-hidden">
+        {toko.footer_bg && (
+            <>
+                <div className="absolute inset-0 z-0">
+                    <img src={toko.footer_bg} alt="Footer Background" className="w-full h-full object-cover opacity-60" />
+                </div>
+                <div className="absolute inset-0 bg-black/80 z-0"></div>
+            </>
+        )}
+        <div className="relative container mx-auto px-6 z-10 text-center">
+            <p className="text-gray-400 text-sm mb-4">Terima kasih sudah mampir di {toko.nama_toko}</p>
+            <p className="text-gray-600 text-xs opacity-50">&copy; {new Date().getFullYear()} {toko.nama_toko}. All rights reserved.</p>
+        </div>
+      </footer>
+
     </div>
   );
 }

@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function Home() {
   const [produk, setProduk] = useState<any[]>([]);
   const [filteredProduk, setFilteredProduk] = useState<any[]>([]);
   
-  // Default Data
   const [toko, setToko] = useState({ 
     nama_toko: 'Loodfie Market', 
     deskripsi: 'Pusat Produk Digital Terlengkap',
@@ -23,8 +23,8 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedKategori, setSelectedKategori] = useState('Semua');
 
-  // ⚠️ EMAIL BOS PERMANEN
-  const emailBos = "pordjox75@gmail.com"; 
+  // 🔒 MENGAMBIL EMAIL DARI BRANKAS RAHASIA (.env.local)
+  const emailBos = process.env.NEXT_PUBLIC_ADMIN_EMAIL; 
 
   const router = useRouter();
 
@@ -49,7 +49,6 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- DAFTAR FONT LENGKAP ---
   const fontMap: any = {
     'Inter': 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap',
     'Poppins': 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700;900&display=swap',
@@ -61,7 +60,6 @@ export default function Home() {
     'Montserrat': 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap',
   };
 
-  // Logika Filter
   useEffect(() => {
     let hasil = produk;
     if (selectedKategori !== 'Semua') {
@@ -74,28 +72,24 @@ export default function Home() {
   }, [searchTerm, selectedKategori, produk]);
 
   const handleLogout = async () => {
+    const toastId = toast.loading("Keluar...");
     await supabase.auth.signOut();
-    setUser(null); router.refresh(); alert("Berhasil Keluar!"); 
+    setUser(null); 
+    router.refresh(); 
+    toast.success("Berhasil Keluar! 👋", { id: toastId });
   };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900" style={{ fontFamily: `"${toko.font_style}", sans-serif` }}>
-      
-      {/* Inject Font CSS */}
-      <style jsx global>{`
-        @import url('${fontMap[toko.font_style] || fontMap['Inter']}');
-      `}</style>
+      <Toaster position="bottom-right" />
+      <style jsx global>{` @import url('${fontMap[toko.font_style] || fontMap['Inter']}'); `}</style>
 
-      {/* NAVBAR (Sedikit lebih ramping) */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-2.5' : 'bg-transparent py-4'}`}>
         <div className="container mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
             <div className="w-8 h-8 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center text-white font-bold text-base shadow border border-white/20">L</div>
-            <span className={`text-lg font-bold tracking-tight ${scrolled ? 'text-gray-900' : 'text-white drop-shadow-md'}`}>
-              {toko.nama_toko}
-            </span>
+            <span className={`text-lg font-bold tracking-tight ${scrolled ? 'text-gray-900' : 'text-white drop-shadow-md'}`}>{toko.nama_toko}</span>
           </div>
-
           <div className="flex items-center gap-3">
             {user?.email === emailBos && (
                 <Link href="/admin" className="hidden md:flex items-center gap-2 bg-gray-900 text-white px-3 py-1.5 rounded-full font-bold text-[11px] shadow-lg hover:bg-gray-700 transition">⚙️ Admin</Link>
@@ -112,65 +106,39 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* HEADER DINAMIS (Lebih Proporsional) */}
-      {/* Ubah padding (pt-28 pb-16), kurangi rounded (rounded-b-[2rem]), kurangi margin (mb-8) */}
       <header className="relative pt-28 pb-16 px-6 text-center overflow-hidden rounded-b-[2rem] shadow-lg mb-8 bg-gray-900">
         {toko.header_bg ? (
             <>
-                <div className="absolute inset-0 z-0">
-                    <img src={toko.header_bg} alt="Header Background" className="w-full h-full object-cover opacity-80" />
-                </div>
+                <div className="absolute inset-0 z-0"><img src={toko.header_bg} alt="Header Background" className="w-full h-full object-cover opacity-80" /></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30 z-0"></div>
             </>
         ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 z-0">
-                 <div className="absolute top-0 left-0 w-96 h-96 bg-white opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl animate-pulse"></div>
-            </div>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 z-0"><div className="absolute top-0 left-0 w-96 h-96 bg-white opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl animate-pulse"></div></div>
         )}
-
         <div className="relative z-10 max-w-3xl mx-auto text-white">
-          <span className="bg-white/20 backdrop-blur px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase mb-3 inline-block border border-white/30">
-            Platform Digital No. #1
-          </span>
-          {/* Ukuran Font Judul Dikurangi Sedikit */}
-          <h1 className="text-2xl md:text-4xl font-extrabold mb-3 tracking-tight leading-tight drop-shadow-lg">
-            {toko.nama_toko}
-          </h1>
-          {/* Ukuran Font Deskripsi Dikurangi Sedikit */}
-          <p className="text-gray-100 text-sm md:text-base mb-6 font-light max-w-xl mx-auto leading-relaxed drop-shadow-md">
-            {toko.deskripsi}
-          </p>
-          
+          <span className="bg-white/20 backdrop-blur px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase mb-3 inline-block border border-white/30">Platform Digital No. #1</span>
+          <h1 className="text-2xl md:text-4xl font-extrabold mb-3 tracking-tight leading-tight drop-shadow-lg">{toko.nama_toko}</h1>
+          <p className="text-gray-100 text-sm md:text-base mb-6 font-light max-w-xl mx-auto leading-relaxed drop-shadow-md">{toko.deskripsi}</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={() => document.getElementById('produk-area')?.scrollIntoView({ behavior: 'smooth' })} className="bg-white text-gray-900 px-5 py-2.5 rounded-full font-bold text-sm shadow-xl hover:scale-105 transition">
-                Mulai Belanja 🛍️
-            </button>
-            <a href="https://wa.me/6285314445959" target="_blank" className="px-5 py-2.5 rounded-full font-bold text-sm border-2 border-white/40 hover:bg-white/10 transition">
-                Hubungi Admin 📞
-            </a>
+            <button onClick={() => document.getElementById('produk-area')?.scrollIntoView({ behavior: 'smooth' })} className="bg-white text-gray-900 px-5 py-2.5 rounded-full font-bold text-sm shadow-xl hover:scale-105 transition">Mulai Belanja 🛍️</button>
+            <a href="https://wa.me/6285314445959" target="_blank" className="px-5 py-2.5 rounded-full font-bold text-sm border-2 border-white/40 hover:bg-white/10 transition">Hubungi Admin 📞</a>
           </div>
         </div>
       </header>
 
-      {/* AREA PRODUK (Grid Compact yang sudah dibuat sebelumnya) */}
       <div id="produk-area" className="container mx-auto px-4 py-6">
         <div className="max-w-4xl mx-auto mb-8">
             <div className="bg-white p-3 rounded-xl shadow-md border border-gray-100 flex flex-col md:flex-row gap-3 items-center">
                 <input type="text" placeholder="Cari produk..." className="w-full pl-4 pr-4 py-2 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 <div className="flex gap-2 w-full md:w-auto overflow-x-auto scrollbar-hide">
                     {['Semua', 'Ebook', 'Template', 'Source Code', 'Video'].map((kat) => (
-                        <button key={kat} onClick={() => setSelectedKategori(kat)} className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${selectedKategori === kat ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                            {kat}
-                        </button>
+                        <button key={kat} onClick={() => setSelectedKategori(kat)} className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${selectedKategori === kat ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{kat}</button>
                     ))}
                 </div>
             </div>
         </div>
-
         {filteredProduk.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300">
-                <p className="text-gray-400 text-sm">Produk tidak ditemukan...</p>
-            </div>
+            <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300"><p className="text-gray-400 text-sm">Produk tidak ditemukan...</p></div>
         ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
                 {filteredProduk.map((item) => (
@@ -179,11 +147,9 @@ export default function Home() {
                             <img src={item.gambar} alt={item.nama_produk} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" />
                             <span className="absolute top-2 left-2 bg-white/90 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide shadow-sm">{item.kategori}</span>
                         </div>
-                        
                         <div className="p-3 flex flex-col flex-grow">
                             <h3 className="text-sm font-bold mb-1 group-hover:text-blue-600 transition leading-snug line-clamp-2">{item.nama_produk}</h3>
                             <p className="text-gray-500 text-[11px] mb-2 line-clamp-2">{item.deskripsi}</p>
-                            
                             <div className="mt-auto flex justify-between items-center pt-2 border-t border-gray-100">
                                 <span className="text-sm font-extrabold text-blue-600">Rp {Number(item.harga).toLocaleString('id-ID')}</span>
                                 <Link href={`/produk/${item.id}`} className="bg-gray-900 text-white w-7 h-7 rounded-full flex items-center justify-center hover:bg-blue-600 transition shadow-md text-[10px]">➜</Link>
@@ -195,39 +161,19 @@ export default function Home() {
         )}
       </div>
       
-      {/* --- FOOTER DINAMIS (Lebih Ramping) --- */}
-      {/* Ubah padding (pt-10 pb-6), kurangi margin atas (mt-10) */}
       <footer className="relative bg-gray-900 text-white pt-10 pb-6 mt-10 border-t-4 border-blue-500 overflow-hidden">
-        {toko.footer_bg && (
-            <>
-                <div className="absolute inset-0 z-0">
-                    <img src={toko.footer_bg} alt="Footer Background" className="w-full h-full object-cover opacity-60" />
-                </div>
-                <div className="absolute inset-0 bg-black/80 z-0"></div>
-            </>
-        )}
-
+        {toko.footer_bg && (<><div className="absolute inset-0 z-0"><img src={toko.footer_bg} className="w-full h-full object-cover opacity-60" /></div><div className="absolute inset-0 bg-black/80 z-0"></div></>)}
         <div className="relative container mx-auto px-6 z-10">
-          {/* Kurangi gap antar kolom (gap-8) dan margin bawah (mb-8) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            
-            {/* Kolom 1 */}
             <div>
-              <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-                <span className="bg-gradient-to-br from-blue-600 to-cyan-500 text-white w-7 h-7 rounded-lg flex items-center justify-center text-xs shadow-lg">L</span>
-                {toko.nama_toko}
-              </h3>
-              <p className="text-gray-300 text-sm leading-relaxed mb-4 pr-4">
-                Platform jual beli produk digital terpercaya. Garansi akses selamanya.
-              </p>
+              <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><span className="bg-gradient-to-br from-blue-600 to-cyan-500 text-white w-7 h-7 rounded-lg flex items-center justify-center text-xs shadow-lg">L</span>{toko.nama_toko}</h3>
+              <p className="text-gray-300 text-sm leading-relaxed mb-4 pr-4">Platform jual beli produk digital terpercaya. Garansi akses selamanya.</p>
               <div className="flex gap-2.5">
                 <a href="#" className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center hover:bg-pink-600 hover:text-white transition cursor-pointer shadow border border-gray-700 text-[10px]">IG</a>
                 <a href="#" className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition cursor-pointer shadow border border-gray-700 text-[10px]">FB</a>
                 <a href="https://wa.me/6285314445959" target="_blank" className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center hover:bg-green-500 hover:text-white transition cursor-pointer shadow border border-gray-700 text-[10px]">WA</a>
               </div>
             </div>
-
-            {/* Kolom 2 */}
             <div>
               <h4 className="text-sm font-bold mb-3 text-blue-400 uppercase tracking-wider">Menu Pintas</h4>
               <ul className="space-y-2 text-gray-300 text-sm">
@@ -237,33 +183,15 @@ export default function Home() {
                 <li><a href="https://wa.me/6285314445959" target="_blank" className="hover:text-green-400 transition flex items-center gap-2">📞 Hubungi Kami</a></li>
               </ul>
             </div>
-
-            {/* Kolom 3 */}
             <div>
               <h4 className="text-sm font-bold mb-3 text-blue-400 uppercase tracking-wider">Metode Pembayaran</h4>
               <div className="flex flex-wrap gap-1 mb-3">
-                {['BCA', 'Mandiri', 'BRI', 'DANA', 'OVO', 'Gopay', 'QRIS'].map((bank) => (
-                    <span key={bank} className="bg-white text-blue-900 px-2 py-0.5 rounded font-bold text-[9px] shadow-sm cursor-default">
-                        {bank}
-                    </span>
-                ))}
+                {['BCA', 'Mandiri', 'BRI', 'DANA', 'OVO', 'Gopay', 'QRIS'].map((bank) => (<span key={bank} className="bg-white text-blue-900 px-2 py-0.5 rounded font-bold text-[9px] shadow-sm cursor-default">{bank}</span>))}
               </div>
-              <div className="p-3 bg-gray-800/80 backdrop-blur rounded-xl border border-gray-700 flex items-center gap-3">
-                <span className="text-xl">🔒</span>
-                <div>
-                  <p className="text-xs font-bold text-gray-200">Jaminan Keamanan 100%</p>
-                  <p className="text-[9px] text-gray-400 mt-0.5">Transaksi terenkripsi & data privasi terjaga.</p>
-                </div>
-              </div>
+              <div className="p-3 bg-gray-800/80 backdrop-blur rounded-xl border border-gray-700 flex items-center gap-3"><span className="text-xl">🔒</span><div><p className="text-xs font-bold text-gray-200">Jaminan Keamanan 100%</p><p className="text-[9px] text-gray-400 mt-0.5">Transaksi terenkripsi & data privasi terjaga.</p></div></div>
             </div>
           </div>
-
-          {/* Kurangi padding atas copyright (pt-4) */}
-          <div className="border-t border-gray-800 pt-4 text-center relative z-10">
-            <p className="text-gray-500 text-xs">
-              &copy; {new Date().getFullYear()} <span className="text-white font-bold">{toko.nama_toko}</span>. All rights reserved.
-            </p>
-          </div>
+          <div className="border-t border-gray-800 pt-4 text-center relative z-10"><p className="text-gray-500 text-xs">&copy; {new Date().getFullYear()} <span className="text-white font-bold">{toko.nama_toko}</span>. All rights reserved.</p></div>
         </div>
       </footer>
     </div>
