@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link'; // 🔥 IMPORT LINK
+import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function AdminPage() {
@@ -36,6 +36,7 @@ export default function AdminPage() {
     async function initAdmin() {
       const { data: { session } } = await supabase.auth.getSession();
       const emailBos = "pordjox75@gmail.com"; 
+      
       if (!session || session.user.email !== emailBos) {
         toast.error("⛔ Akses Ditolak! Kamu bukan Bos.");
         router.push('/');
@@ -59,7 +60,7 @@ export default function AdminPage() {
     if (data) setToko(data);
   }
 
-  // LOGIKA PRODUK
+  // --- LOGIKA PRODUK ---
   const handleEditClick = (produk: any) => { setIdProduk(produk.id); setNama(produk.nama_produk); setHarga(produk.harga); setHargaCoret(produk.harga_coret || ''); setDeskripsi(produk.deskripsi || ''); setKategori(produk.kategori); setLinkMayar(produk.link_mayar || ''); setGambarLama(produk.gambar); setFileGambar(null); window.scrollTo({ top: 0, behavior: 'smooth' }); toast("✏️ Mode Edit Aktif", { icon: '📝' }); };
   const handleBatalEdit = () => { setIdProduk(null); setNama(''); setHarga(''); setHargaCoret(''); setDeskripsi(''); setKategori('Ebook'); setLinkMayar(''); setFileGambar(null); setGambarLama(''); toast("Mode edit dibatalkan", { icon: '❌' }); };
   
@@ -81,7 +82,23 @@ export default function AdminPage() {
   };
   const handleHapusProduk = async (id: number) => { if (!confirm("Yakin hapus?")) return; const toastId = toast.loading("Menghapus..."); await supabase.from('produk').delete().eq('id', id); toast.success("Terhapus!", { id: toastId }); ambilDaftarProduk(); if (idProduk === id) handleBatalEdit(); };
 
-  // LOGIKA TAMPILAN
+  // --- LOGIKA TAMPILAN & POPUP ---
+  
+  // 🔥 FUNGSI HAPUS POPUP (DATABASE UPDATE KE NULL)
+  const handleHapusPopup = async () => {
+    if (!confirm("Yakin mau menghapus/mematikan Pop-up iklan ini?")) return;
+    const toastId = toast.loading("Menghapus Pop-up...");
+    try {
+        const { error } = await supabase.from('toko').update({ popup_image: null }).eq('id', toko.id);
+        if (error) throw error;
+        setToko({ ...toko, popup_image: null });
+        setFilePopup(null);
+        toast.success("Pop-up berhasil dihapus! 🗑️", { id: toastId });
+    } catch (err: any) {
+        toast.error("Gagal hapus: " + err.message, { id: toastId });
+    }
+  };
+
   const handleUpdateTampilan = async (e: React.FormEvent) => {
     e.preventDefault(); setSavingTema(true); const toastId = toast.loading("Menyimpan Tampilan...");
     try {
@@ -101,7 +118,9 @@ export default function AdminPage() {
     } catch (err: any) { toast.error("Gagal update: " + err.message, { id: toastId }); } finally { setSavingTema(false); }
   };
 
-  if (loading) return <p className="text-center p-10">Memeriksa izin akses...</p>;
+  // ✅ PERBAIKAN DI SINI (Kutip sudah ditutup rapat)
+  if (loading) return <div className="flex h-screen items-center justify-center"><p className="text-xl font-bold text-gray-500 animate-pulse">Memeriksa izin akses...</p></div>;
+  
   if (!isAdmin) return null;
 
   return (
@@ -109,12 +128,10 @@ export default function AdminPage() {
       <Toaster position="bottom-right" />
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-            {/* 🔥 TOMBOL KEMBALI KE HOME DITAMBAHKAN DISINI */}
             <div className="flex items-center gap-4">
                 <Link href="/" className="bg-gray-800 text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-900 transition shadow-lg flex items-center gap-2">⬅️ Kembali ke Home</Link>
                 <h1 className="text-3xl font-bold text-gray-800">⚙️ Admin Control</h1>
             </div>
-            
             <div className="bg-white p-1 rounded-xl shadow-sm flex gap-2">
                 <button onClick={() => setActiveTab('produk')} className={`px-6 py-2 rounded-lg font-bold transition ${activeTab === 'produk' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>📦 Produk</button>
                 <button onClick={() => setActiveTab('tampilan')} className={`px-6 py-2 rounded-lg font-bold transition ${activeTab === 'tampilan' ? 'bg-purple-600 text-white' : 'text-gray-500'}`}>🎨 Tampilan</button>
@@ -131,7 +148,6 @@ export default function AdminPage() {
                             <input type="number" placeholder="Harga Jual" required className="w-full p-2 border rounded-lg font-bold text-blue-600" value={harga} onChange={e => setHarga(e.target.value)} />
                             <input type="number" placeholder="Harga Coret" className="w-full p-2 border rounded-lg text-red-500 line-through" value={hargaCoret} onChange={e => setHargaCoret(e.target.value)} />
                         </div>
-                        {/* 🔥 OPSI SOURCE CODE SUDAH DIHAPUS DARI SINI */}
                         <select className="w-full p-2 border rounded-lg bg-white" value={kategori} onChange={e => setKategori(e.target.value)}><option>Ebook</option><option>Template</option><option>Video</option></select>
                         <textarea placeholder="Deskripsi" className="w-full p-2 border rounded-lg" rows={3} value={deskripsi} onChange={e => setDeskripsi(e.target.value)}></textarea>
                         <input type="text" placeholder="Link Mayar/Google" className="w-full p-2 border rounded-lg" value={linkMayar} onChange={e => setLinkMayar(e.target.value)} />
@@ -157,13 +173,29 @@ export default function AdminPage() {
                     <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
                         <label className="block text-sm font-bold text-blue-800 mb-3">📊 Data Statistik Toko</label>
                         <div className="grid grid-cols-3 gap-3">
-                            <div><label className="text-xs text-gray-500">Total Member</label><input type="text" className="w-full p-2 border rounded-lg font-bold" value={toko.total_member || ''} onChange={e => setToko({...toko, total_member: e.target.value})} placeholder="2,500+" /></div>
-                            <div><label className="text-xs text-gray-500">Produk Terjual</label><input type="text" className="w-full p-2 border rounded-lg font-bold" value={toko.total_terjual || ''} onChange={e => setToko({...toko, total_terjual: e.target.value})} placeholder="10,000+" /></div>
-                            <div><label className="text-xs text-gray-500">Kepuasan</label><input type="text" className="w-full p-2 border rounded-lg font-bold" value={toko.kepuasan || ''} onChange={e => setToko({...toko, kepuasan: e.target.value})} placeholder="99%" /></div>
+                            <div><label className="text-xs text-gray-500">Total Member</label><input type="text" className="w-full p-2 border rounded-lg font-bold" value={toko.total_member || ''} onChange={e => setToko({...toko, total_member: e.target.value})} /></div>
+                            <div><label className="text-xs text-gray-500">Produk Terjual</label><input type="text" className="w-full p-2 border rounded-lg font-bold" value={toko.total_terjual || ''} onChange={e => setToko({...toko, total_terjual: e.target.value})} /></div>
+                            <div><label className="text-xs text-gray-500">Kepuasan</label><input type="text" className="w-full p-2 border rounded-lg font-bold" value={toko.kepuasan || ''} onChange={e => setToko({...toko, kepuasan: e.target.value})} /></div>
                         </div>
                     </div>
 
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl"><label className="block text-sm font-bold text-red-700 mb-1">🔥 Pop-up Iklan</label><input type="file" onChange={e => setFilePopup(e.target.files?.[0] || null)} /></div>
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                        <label className="block text-sm font-bold text-red-700 mb-2">🔥 Pop-up Iklan</label>
+                        {/* FITUR HAPUS MUNCUL KALAU ADA GAMBAR */}
+                        {toko.popup_image ? (
+                            <div className="mb-3">
+                                <img src={toko.popup_image} className="h-32 w-auto rounded-lg object-contain bg-white border mb-2" />
+                                <button type="button" onClick={handleHapusPopup} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-600 transition shadow flex items-center gap-1">🗑️ Hapus Pop-up & Matikan Iklan</button>
+                            </div>
+                        ) : (
+                            <p className="text-xs text-gray-400 mb-2 italic">Tidak ada iklan aktif.</p>
+                        )}
+                        <input type="file" onChange={e => setFilePopup(e.target.files?.[0] || null)} className="w-full text-sm" />
+                    </div>
+
+                    <div className="p-3 bg-gray-50 rounded-xl"><label className="block text-sm font-bold text-gray-700 mb-1">Header Background</label><input type="file" onChange={e => setFileHeader(e.target.files?.[0] || null)} className="text-sm" /></div>
+                    <div className="p-3 bg-gray-50 rounded-xl"><label className="block text-sm font-bold text-gray-700 mb-1">Footer Background</label><input type="file" onChange={e => setFileFooter(e.target.files?.[0] || null)} className="text-sm" /></div>
+
                     <button disabled={savingTema} className="w-full bg-purple-600 text-white py-4 rounded-xl font-bold hover:bg-purple-700 transition shadow-lg">{savingTema ? 'Menyimpan...' : 'Simpan Semua Tampilan ✨'}</button>
                 </form>
             </div>
