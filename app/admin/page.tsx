@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect } from 'react';
@@ -25,6 +26,7 @@ export default function AdminPage() {
   // STATE TAMPILAN
   const [toko, setToko] = useState<any>({});
   const [fileHeader, setFileHeader] = useState<File | null>(null);
+  const [fileFooter, setFileFooter] = useState<File | null>(null); // State Baru buat Footer
   const [savingTema, setSavingTema] = useState(false);
 
   // --- 1. AUTH & INIT DATA ---
@@ -32,7 +34,7 @@ export default function AdminPage() {
     async function initAdmin() {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // ⚠️ EMAIL BOS (JANGAN DIGANTI)
+      // ⚠️ EMAIL BOS PERMANEN
       const emailBos = "pordjox75@gmail.com"; 
 
       if (!session || session.user.email !== emailBos) {
@@ -50,26 +52,13 @@ export default function AdminPage() {
   }, []);
 
   async function ambilDaftarProduk() {
-    try {
-        const { data, error } = await supabase.from('produk').select('*').order('id', { ascending: false });
-        if (error) {
-            console.error("Error ambil produk:", error.message);
-            return;
-        }
-        if (data) setDaftarProduk(data);
-    } catch (err) {
-        console.log("Koneksi produk bermasalah");
-    }
+    const { data } = await supabase.from('produk').select('*').order('id', { ascending: false });
+    if (data) setDaftarProduk(data);
   }
 
   async function ambilDataToko() {
-    try {
-        const { data, error } = await supabase.from('toko').select('*').single();
-        // Kalau error (misal tabel belum ada), kita abaikan dulu biar gak popup
-        if (data) setToko(data);
-    } catch (err) {
-        console.log("Tabel toko belum siap");
-    }
+    const { data } = await supabase.from('toko').select('*').single();
+    if (data) setToko(data);
   }
 
   // --- 2. LOGIKA PRODUK ---
@@ -85,7 +74,6 @@ export default function AdminPage() {
         urlGambar = data.publicUrl;
       }
 
-      // Pastikan nama kolom di Supabase adalah 'nama_produk'
       const { error } = await supabase.from('produk').insert([{
         nama_produk: nama, 
         harga: Number(harga), 
@@ -98,9 +86,7 @@ export default function AdminPage() {
       if (error) throw error;
       alert("✅ Produk Berhasil Ditambah!");
       setNama(''); setHarga(''); setFileGambar(null); ambilDaftarProduk();
-    } catch (err: any) { 
-        alert("Gagal Upload: " + err.message + "\nCek apakah tabel 'produk' punya kolom 'nama_produk'?"); 
-    } 
+    } catch (err: any) { alert("Gagal Upload: " + err.message); } 
     finally { setUploading(false); }
   };
 
@@ -110,13 +96,15 @@ export default function AdminPage() {
     ambilDaftarProduk();
   };
 
-  // --- 3. LOGIKA TAMPILAN ---
+  // --- 3. LOGIKA TAMPILAN (HEADER & FOOTER) ---
   const handleUpdateTampilan = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingTema(true);
     try {
         let urlHeader = toko.header_bg; 
+        let urlFooter = toko.footer_bg; // Ambil data lama dulu
 
+        // Upload Header Baru (Jika ada)
         if (fileHeader) {
             const namaFile = `header-${Date.now()}-${fileHeader.name}`;
             await supabase.storage.from('gambar-produk').upload(namaFile, fileHeader);
@@ -124,31 +112,33 @@ export default function AdminPage() {
             urlHeader = data.publicUrl;
         }
 
-        // Kalau ID Toko belum ada (pertama kali), kita Insert. Kalau sudah ada, kita Update.
+        // Upload Footer Baru (Jika ada)
+        if (fileFooter) {
+            const namaFile = `footer-${Date.now()}-${fileFooter.name}`;
+            await supabase.storage.from('gambar-produk').upload(namaFile, fileFooter);
+            const { data } = supabase.storage.from('gambar-produk').getPublicUrl(namaFile);
+            urlFooter = data.publicUrl;
+        }
+
+        // Update Database
+        const payload = {
+            nama_toko: toko.nama_toko,
+            deskripsi: toko.deskripsi,
+            font_style: toko.font_style,
+            header_bg: urlHeader,
+            footer_bg: urlFooter // Simpan URL Footer
+        };
+
         if (!toko.id) {
-            const { error } = await supabase.from('toko').insert([{
-                nama_toko: toko.nama_toko,
-                deskripsi: toko.deskripsi,
-                font_style: toko.font_style,
-                header_bg: urlHeader
-            }]);
-            if (error) throw error;
+            await supabase.from('toko').insert([payload]);
         } else {
-            const { error } = await supabase.from('toko').update({
-                nama_toko: toko.nama_toko,
-                deskripsi: toko.deskripsi,
-                font_style: toko.font_style,
-                header_bg: urlHeader
-            }).eq('id', toko.id);
-            if (error) throw error;
+            await supabase.from('toko').update(payload).eq('id', toko.id);
         }
 
         alert("🎨 Tampilan Toko Berhasil Diupdate!");
         ambilDataToko(); 
 
-    } catch (err: any) { 
-        alert("Gagal update tema: " + err.message + "\nPastikan tabel 'toko' sudah dibuat di Supabase!"); 
-    }
+    } catch (err: any) { alert("Gagal update tema: " + err.message); }
     finally { setSavingTema(false); }
   };
 
@@ -159,19 +149,11 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-6xl mx-auto">
         
-        {/* HEADER ADMIN & TOMBOL KEMBALI */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div className="flex items-center gap-4">
-                {/* TOMBOL KEMBALI (BARU) */}
-                <button 
-                    onClick={() => router.push('/')} 
-                    className="bg-gray-800 text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-900 transition flex items-center gap-2 shadow-lg"
-                >
-                    ⬅️ Kembali ke Website
-                </button>
+                <button onClick={() => router.push('/')} className="bg-gray-800 text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-900 transition flex items-center gap-2 shadow-lg">⬅️ Kembali ke Website</button>
                 <h1 className="text-3xl font-bold text-gray-800">⚙️ Admin Control</h1>
             </div>
-
             <div className="bg-white p-1 rounded-xl shadow-sm flex gap-2">
                 <button onClick={() => setActiveTab('produk')} className={`px-6 py-2 rounded-lg font-bold transition ${activeTab === 'produk' ? 'bg-blue-600 text-white shadow' : 'text-gray-500 hover:bg-gray-100'}`}>📦 Produk</button>
                 <button onClick={() => setActiveTab('tampilan')} className={`px-6 py-2 rounded-lg font-bold transition ${activeTab === 'tampilan' ? 'bg-purple-600 text-white shadow' : 'text-gray-500 hover:bg-gray-100'}`}>🎨 Tampilan</button>
@@ -200,24 +182,19 @@ export default function AdminPage() {
                         </button>
                     </form>
                 </div>
-
                 <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-lg">
                     <h2 className="text-xl font-bold mb-4 border-b pb-2">List Produk ({daftarProduk.length})</h2>
                     <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                        {daftarProduk.length === 0 ? (
-                             <p className="text-gray-400 text-center py-4">Belum ada data produk.</p>
-                        ) : (
-                            daftarProduk.map(item => (
-                                <div key={item.id} className="flex items-center gap-3 p-3 border rounded-xl hover:bg-gray-50">
-                                    <img src={item.gambar} className="w-12 h-12 rounded object-cover bg-gray-200" />
-                                    <div className="flex-grow">
-                                        <p className="font-bold text-sm">{item.nama_produk}</p>
-                                        <p className="text-xs text-gray-500">Rp {item.harga?.toLocaleString()}</p>
-                                    </div>
-                                    <button onClick={() => handleHapusProduk(item.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg">🗑️</button>
+                        {daftarProduk.map(item => (
+                            <div key={item.id} className="flex items-center gap-3 p-3 border rounded-xl hover:bg-gray-50">
+                                <img src={item.gambar} className="w-12 h-12 rounded object-cover bg-gray-200" />
+                                <div className="flex-grow">
+                                    <p className="font-bold text-sm">{item.nama_produk}</p>
+                                    <p className="text-xs text-gray-500">Rp {item.harga?.toLocaleString()}</p>
                                 </div>
-                            ))
-                        )}
+                                <button onClick={() => handleHapusProduk(item.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg">🗑️</button>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -227,48 +204,39 @@ export default function AdminPage() {
         {activeTab === 'tampilan' && (
             <div className="max-w-2xl mx-auto bg-white p-8 rounded-3xl shadow-xl border border-purple-100">
                 <h2 className="text-2xl font-bold mb-6 text-purple-700">🎨 Setting Tampilan</h2>
-                
-                {/* Warning kalau tabel toko belum dibuat */}
-                {!toko.id && (
-                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl mb-6 text-sm text-yellow-800">
-                        ⚠️ <b>Peringatan:</b> Tabel 'toko' belum terdeteksi. Silakan isi form ini untuk membuat data awal.
-                    </div>
-                )}
-
                 <form onSubmit={handleUpdateTampilan} className="space-y-6">
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Nama Toko</label>
-                        <input type="text" className="w-full p-3 border rounded-xl" value={toko.nama_toko || ''} onChange={e => setToko({...toko, nama_toko: e.target.value})} placeholder="Contoh: Loodfie Market" />
+                        <input type="text" className="w-full p-3 border rounded-xl" value={toko.nama_toko || ''} onChange={e => setToko({...toko, nama_toko: e.target.value})} />
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Slogan</label>
-                        <textarea className="w-full p-3 border rounded-xl" rows={2} value={toko.deskripsi || ''} onChange={e => setToko({...toko, deskripsi: e.target.value})} placeholder="Deskripsi singkat toko..."></textarea>
+                        <textarea className="w-full p-3 border rounded-xl" rows={2} value={toko.deskripsi || ''} onChange={e => setToko({...toko, deskripsi: e.target.value})}></textarea>
                     </div>
-
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">Gaya Font (Huruf)</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Gaya Font</label>
                         <select className="w-full p-3 border rounded-xl bg-white" value={toko.font_style || 'Inter'} onChange={e => setToko({...toko, font_style: e.target.value})}>
-                            <option value="Inter">Inter (Modern Standard)</option>
-                            <option value="Poppins">Poppins (Bulat & Ceria)</option>
-                            <option value="Playfair Display">Playfair (Elegan & Mewah)</option>
-                            <option value="Roboto Mono">Roboto Mono (Ala Coding)</option>
-                            <option value="Lobster">Lobster (Tulisan Sambung Unik)</option>
-                            <option value="Dancing Script">Dancing Script (Tulisan Tangan Cantik)</option>
-                            <option value="Oswald">Oswald (Tegas & Kotak)</option>
-                            <option value="Montserrat">Montserrat (Minimalis Geometris)</option>
+                            <option value="Inter">Inter</option><option value="Poppins">Poppins</option><option value="Playfair Display">Playfair</option><option value="Roboto Mono">Roboto Mono</option><option value="Lobster">Lobster</option><option value="Dancing Script">Dancing Script</option><option value="Oswald">Oswald</option><option value="Montserrat">Montserrat</option>
                         </select>
                     </div>
 
+                    {/* BACKGROUND HEADER */}
                     <div className="p-4 border-2 border-dashed border-purple-200 rounded-xl bg-purple-50">
                         <label className="block text-sm font-bold text-purple-700 mb-2">Ganti Background Header</label>
-                        {toko.header_bg && (
-                            <img src={toko.header_bg} className="mb-3 h-32 w-full rounded-lg object-cover" />
-                        )}
+                        {toko.header_bg && <img src={toko.header_bg} className="mb-3 h-32 w-full rounded-lg object-cover" />}
                         <input type="file" accept="image/*" className="w-full text-sm" onChange={e => setFileHeader(e.target.files?.[0] || null)} />
                     </div>
 
+                    {/* BACKGROUND FOOTER (BARU) */}
+                    <div className="p-4 border-2 border-dashed border-pink-200 rounded-xl bg-pink-50">
+                        <label className="block text-sm font-bold text-pink-700 mb-2">Ganti Background Footer (Baru)</label>
+                        {toko.footer_bg && <img src={toko.footer_bg} className="mb-3 h-32 w-full rounded-lg object-cover" />}
+                        <input type="file" accept="image/*" className="w-full text-sm" onChange={e => setFileFooter(e.target.files?.[0] || null)} />
+                        <p className="text-xs text-gray-500 mt-2">*Disarankan gambar gelap supaya tulisan terbaca.</p>
+                    </div>
+
                     <button disabled={savingTema} className="w-full bg-purple-600 text-white py-4 rounded-xl font-bold hover:bg-purple-700 transition shadow-lg">
-                        {savingTema ? 'Menyimpan...' : 'Simpan Tampilan Baru ✨'}
+                        {savingTema ? 'Menyimpan...' : 'Simpan Semua Tampilan ✨'}
                     </button>
                 </form>
             </div>
