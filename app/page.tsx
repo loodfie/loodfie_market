@@ -16,17 +16,22 @@ export default function Home() {
     deskripsi: 'Pusat Produk Digital Terlengkap',
     header_bg: null,
     footer_bg: null,
-    font_style: 'Inter'
+    font_style: 'Inter',
+    running_text: '🔥 Selamat Datang di Loodfie Market! Pusat Produk Digital Terbaik & Terpercaya. Garansi Akses Selamanya! 🚀'
   });
   
   const [user, setUser] = useState<any>(null);
   const [scrolled, setScrolled] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedKategori, setSelectedKategori] = useState('Semua');
-  const emailBos = process.env.NEXT_PUBLIC_ADMIN_EMAIL; 
+  
+  // ⚠️ KITA PAKAI CARA MANUAL DULU BIAR TOMBOL MUNCUL
+  // Ganti email di bawah ini sesuai email login Bos di Supabase/Google
+  const emailBos = "pordjox75@gmail.com"; 
 
   const router = useRouter();
 
+  // --- 1. INIT DATA ---
   useEffect(() => {
     async function initData() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -39,7 +44,13 @@ export default function Home() {
       }
 
       const { data: dataToko } = await supabase.from('toko').select('*').single();
-      if (dataToko) setToko(dataToko);
+      if (dataToko) {
+          setToko(prev => ({
+              ...prev, 
+              ...dataToko,
+              running_text: dataToko.running_text || prev.running_text
+          }));
+      }
     }
     initData();
 
@@ -84,16 +95,20 @@ export default function Home() {
       <FloatingWA />
       <style jsx global>{` @import url('${fontMap[toko.font_style] || fontMap['Inter']}'); `}</style>
 
+      {/* NAVBAR */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-2.5' : 'bg-transparent py-4'}`}>
         <div className="container mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
             <div className="w-8 h-8 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center text-white font-bold text-base shadow border border-white/20">L</div>
             <span className={`text-lg font-bold tracking-tight ${scrolled ? 'text-gray-900' : 'text-white drop-shadow-md'}`}>{toko.nama_toko}</span>
           </div>
+          
           <div className="flex items-center gap-3">
+            {/* 🔥 LOGIKA TOMBOL ADMIN: HANYA MUNCUL JIKA EMAIL SAMA */}
             {user?.email === emailBos && (
                 <Link href="/admin" className="hidden md:flex items-center gap-2 bg-gray-900 text-white px-3 py-1.5 rounded-full font-bold text-[11px] shadow-lg hover:bg-gray-700 transition">⚙️ Admin</Link>
             )}
+            
             {user ? (
                <>
                 <Link href="/dashboard" className="hidden md:flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur px-3 py-1.5 rounded-full border border-white/20 transition text-white font-bold text-[11px]">Dashboard</Link>
@@ -106,6 +121,7 @@ export default function Home() {
         </div>
       </nav>
 
+      {/* HEADER HERO */}
       <header className="relative pt-28 pb-16 px-6 text-center overflow-hidden rounded-b-[2rem] shadow-lg mb-8 bg-gray-900">
         {toko.header_bg ? (
             <>
@@ -115,19 +131,34 @@ export default function Home() {
         ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 z-0"><div className="absolute top-0 left-0 w-96 h-96 bg-white opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl animate-pulse"></div></div>
         )}
+        
         <div className="relative z-10 max-w-3xl mx-auto text-white">
           <span className="bg-white/20 backdrop-blur px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase mb-3 inline-block border border-white/30">Platform Digital No. #1</span>
           <h1 className="text-2xl md:text-4xl font-extrabold mb-3 tracking-tight leading-tight drop-shadow-lg">{toko.nama_toko}</h1>
           <p className="text-gray-100 text-sm md:text-base mb-6 font-light max-w-xl mx-auto leading-relaxed drop-shadow-md">{toko.deskripsi}</p>
-          
-          {/* 👇 TOMBOL DI HEADER TINGGAL SATU */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button onClick={() => document.getElementById('produk-area')?.scrollIntoView({ behavior: 'smooth' })} className="bg-white text-gray-900 px-5 py-2.5 rounded-full font-bold text-sm shadow-xl hover:scale-105 transition">Mulai Belanja 🛍️</button>
           </div>
-
+        </div>
+        
+        {/* 🔥 RUNNING TEXT SEAMLESS */}
+        <div className="absolute bottom-0 left-0 right-0 bg-yellow-400 text-yellow-900 py-2 overflow-hidden z-20 shadow-inner border-t-2 border-yellow-300">
+            <div className="flex whitespace-nowrap animate-marquee">
+                {[...Array(10)].map((_, i) => (
+                    <div key={i} className="flex items-center mx-6 gap-6">
+                        <span className="font-bold text-sm tracking-wide uppercase">
+                            {toko.running_text}
+                        </span>
+                        <span className="text-lg animate-pulse">
+                            {i % 3 === 0 ? '🔥' : i % 3 === 1 ? '⚡' : '🚀'}
+                        </span>
+                    </div>
+                ))}
+            </div>
         </div>
       </header>
 
+      {/* AREA PRODUK */}
       <div id="produk-area" className="container mx-auto px-4 py-6">
         <div className="max-w-4xl mx-auto mb-8">
             <div className="bg-white p-3 rounded-xl shadow-md border border-gray-100 flex flex-col md:flex-row gap-3 items-center">
@@ -139,12 +170,18 @@ export default function Home() {
                 </div>
             </div>
         </div>
+
         {filteredProduk.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300"><p className="text-gray-400 text-sm">Produk tidak ditemukan...</p></div>
         ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
                 {filteredProduk.map((item) => (
-                    <div key={item.id} className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100 flex flex-col h-full">
+                    <div key={item.id} className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100 flex flex-col h-full relative">
+                        {item.harga_coret && item.harga_coret > item.harga && (
+                            <div className="absolute top-2 right-2 z-10 bg-red-500 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md animate-pulse">
+                                Hemat {Math.round(((item.harga_coret - item.harga) / item.harga_coret) * 100)}%
+                            </div>
+                        )}
                         <div className="h-36 bg-gray-100 flex items-center justify-center relative overflow-hidden">
                             <img src={item.gambar} alt={item.nama_produk} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" />
                             <span className="absolute top-2 left-2 bg-white/90 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide shadow-sm">{item.kategori}</span>
@@ -152,9 +189,14 @@ export default function Home() {
                         <div className="p-3 flex flex-col flex-grow">
                             <h3 className="text-sm font-bold mb-1 group-hover:text-blue-600 transition leading-snug line-clamp-2">{item.nama_produk}</h3>
                             <p className="text-gray-500 text-[11px] mb-2 line-clamp-2">{item.deskripsi}</p>
-                            <div className="mt-auto flex justify-between items-center pt-2 border-t border-gray-100">
-                                <span className="text-sm font-extrabold text-blue-600">Rp {Number(item.harga).toLocaleString('id-ID')}</span>
-                                <Link href={`/produk/${item.id}`} className="bg-gray-900 text-white w-7 h-7 rounded-full flex items-center justify-center hover:bg-blue-600 transition shadow-md text-[10px]">➜</Link>
+                            <div className="mt-auto pt-2 border-t border-gray-100">
+                                {item.harga_coret && item.harga_coret > item.harga && (
+                                    <p className="text-[10px] text-gray-400 line-through">Rp {Number(item.harga_coret).toLocaleString('id-ID')}</p>
+                                )}
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-extrabold text-blue-600">Rp {Number(item.harga).toLocaleString('id-ID')}</span>
+                                    <Link href={`/produk/${item.id}`} className="bg-gray-900 text-white w-7 h-7 rounded-full flex items-center justify-center hover:bg-blue-600 transition shadow-md text-[10px]">➜</Link>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -163,8 +205,9 @@ export default function Home() {
         )}
       </div>
       
+      {/* FOOTER */}
       <footer className="relative bg-gray-900 text-white pt-10 pb-6 mt-10 border-t-4 border-blue-500 overflow-hidden">
-        {toko.footer_bg && (<><div className="absolute inset-0 z-0"><img src={toko.footer_bg} className="w-full h-full object-cover opacity-60" /></div><div className="absolute inset-0 bg-black/80 z-0"></div></>)}
+        {toko.footer_bg && (<><div className="absolute inset-0 z-0"><img src={toko.footer_bg} alt="Footer Background" className="w-full h-full object-cover opacity-60" /></div><div className="absolute inset-0 bg-black/80 z-0"></div></>)}
         <div className="relative container mx-auto px-6 z-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div>
@@ -176,18 +219,13 @@ export default function Home() {
                 <a href="https://wa.me/6285314445959" target="_blank" className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center hover:bg-green-500 hover:text-white transition cursor-pointer shadow border border-gray-700 text-[10px]">WA</a>
               </div>
             </div>
-            
-            {/* 👇 BAGIAN MENU PINTAS DI FOOTER */}
             <div>
               <h4 className="text-sm font-bold mb-3 text-blue-400 uppercase tracking-wider">Menu Pintas</h4>
               <ul className="space-y-2 text-gray-300 text-sm">
                 <li><Link href="/" className="hover:text-white transition flex items-center gap-2">🏠 Beranda</Link></li>
-                <li><button onClick={() => document.getElementById('produk-area')?.scrollIntoView({behavior: 'smooth'})} className="hover:text-white transition flex items-center gap-2 text-left">🛍️ Katalog Produk</button></li>
                 <li><Link href="/dashboard" className="hover:text-white transition flex items-center gap-2">👤 Member Area</Link></li>
-                {/* Link Hubungi Kami di sini sudah DIHAPUS */}
               </ul>
             </div>
-
             <div>
               <h4 className="text-sm font-bold mb-3 text-blue-400 uppercase tracking-wider">Metode Pembayaran</h4>
               <div className="flex flex-wrap gap-1 mb-3">

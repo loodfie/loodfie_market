@@ -12,6 +12,7 @@ export default function DetailProduk() {
   const [produk, setProduk] = useState<any>(null);
   const [related, setRelated] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewers, setViewers] = useState(0); // State buat FOMO
   
   const [toko, setToko] = useState({ 
     nama_toko: 'Loodfie Market', 
@@ -20,6 +21,9 @@ export default function DetailProduk() {
   });
 
   useEffect(() => {
+    // 🔥 LOGIKA FOMO RANDOM (Angka antara 5 - 25)
+    setViewers(Math.floor(Math.random() * (25 - 5 + 1)) + 5);
+
     async function getData() {
       const { data: dataToko } = await supabase.from('toko').select('*').single();
       if (dataToko) setToko(dataToko);
@@ -107,8 +111,27 @@ export default function DetailProduk() {
                     <span className="absolute top-6 left-6 bg-white/90 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide shadow-sm border border-gray-200">{produk.kategori}</span>
                 </div>
                 <div className="p-8 md:p-12 flex flex-col justify-center">
+                    {/* 🔥 FITUR FOMO */}
+                    <div className="mb-4 flex items-center gap-2 animate-pulse">
+                        <span className="h-2 w-2 bg-red-500 rounded-full"></span>
+                        <span className="text-xs font-bold text-red-500">{viewers} orang sedang melihat produk ini!</span>
+                    </div>
+
                     <h1 className="text-3xl md:text-4xl font-extrabold mb-4 text-gray-900 leading-tight">{produk.nama_produk}</h1>
-                    <div className="text-3xl font-extrabold text-blue-600 mb-8">Rp {Number(produk.harga).toLocaleString('id-ID')}</div>
+                    
+                    {/* HARGA & DISKON */}
+                    <div className="mb-8">
+                        {produk.harga_coret && produk.harga_coret > produk.harga && (
+                            <div className="flex items-center gap-3 mb-1">
+                                <span className="text-gray-400 line-through text-lg">Rp {Number(produk.harga_coret).toLocaleString('id-ID')}</span>
+                                <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">
+                                    Hemat {Math.round(((produk.harga_coret - produk.harga) / produk.harga_coret) * 100)}%
+                                </span>
+                            </div>
+                        )}
+                        <div className="text-3xl font-extrabold text-blue-600">Rp {Number(produk.harga).toLocaleString('id-ID')}</div>
+                    </div>
+
                     <div className="prose prose-sm text-gray-500 mb-10 leading-relaxed whitespace-pre-line">{produk.deskripsi || "Tidak ada deskripsi untuk produk ini."}</div>
                     <div className="mt-auto space-y-4">
                         <button onClick={handleBeli} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg shadow-xl hover:bg-blue-700 hover:shadow-blue-500/30 transition transform hover:scale-[1.02] flex items-center justify-center gap-2">🛒 Beli Sekarang</button>
@@ -123,7 +146,13 @@ export default function DetailProduk() {
                 <h3 className="text-2xl font-bold mb-8 flex items-center gap-3">✨ Produk Serupa <span className="text-sm font-normal text-gray-500 bg-white px-3 py-1 rounded-full shadow-sm">Rekomendasi</span></h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {related.map((item) => (
-                        <Link href={`/produk/${item.id}`} key={item.id} className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100 flex flex-col h-full">
+                        <Link href={`/produk/${item.id}`} key={item.id} className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100 flex flex-col h-full relative">
+                             {/* Badge Diskon Kecil */}
+                             {item.harga_coret && item.harga_coret > item.harga && (
+                                <div className="absolute top-2 right-2 z-10 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow">
+                                    -{Math.round(((item.harga_coret - item.harga) / item.harga_coret) * 100)}%
+                                </div>
+                             )}
                              <div className="h-32 bg-gray-100 flex items-center justify-center relative overflow-hidden">
                                 <img src={item.gambar} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" />
                                 <span className="absolute top-2 left-2 bg-white/90 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide shadow-sm">{item.kategori}</span>
@@ -141,38 +170,7 @@ export default function DetailProduk() {
 
       <footer className="relative bg-gray-900 text-white pt-10 pb-6 mt-20 border-t-4 border-blue-500 overflow-hidden">
         {toko.footer_bg && (<><div className="absolute inset-0 z-0"><img src={toko.footer_bg} alt="Footer Background" className="w-full h-full object-cover opacity-60" /></div><div className="absolute inset-0 bg-black/80 z-0"></div></>)}
-        <div className="relative container mx-auto px-6 z-10">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            <div>
-              <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><span className="bg-gradient-to-br from-blue-600 to-cyan-500 text-white w-7 h-7 rounded-lg flex items-center justify-center text-xs shadow-lg">L</span>{toko.nama_toko}</h3>
-              <p className="text-gray-300 text-sm leading-relaxed mb-4 pr-4">Platform jual beli produk digital terpercaya. Garansi akses selamanya.</p>
-              <div className="flex gap-2.5">
-                <a href="#" className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center hover:bg-pink-600 hover:text-white transition cursor-pointer shadow border border-gray-700 text-[10px]">IG</a>
-                <a href="#" className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition cursor-pointer shadow border border-gray-700 text-[10px]">FB</a>
-                <a href="https://wa.me/6285314445959" target="_blank" className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center hover:bg-green-500 hover:text-white transition cursor-pointer shadow border border-gray-700 text-[10px]">WA</a>
-              </div>
-            </div>
-            
-            {/* 👇 BAGIAN MENU PINTAS DI FOOTER HALAMAN DETAIL */}
-            <div>
-              <h4 className="text-sm font-bold mb-3 text-blue-400 uppercase tracking-wider">Menu Pintas</h4>
-              <ul className="space-y-2 text-gray-300 text-sm">
-                <li><Link href="/" className="hover:text-white transition flex items-center gap-2">🏠 Beranda</Link></li>
-                <li><Link href="/dashboard" className="hover:text-white transition flex items-center gap-2">👤 Member Area</Link></li>
-                {/* Link Hubungi Kami dan Katalog sudah DIHAPUS di sini biar ringkas */}
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-bold mb-3 text-blue-400 uppercase tracking-wider">Metode Pembayaran</h4>
-              <div className="flex flex-wrap gap-1 mb-3">
-                {['BCA', 'Mandiri', 'BRI', 'DANA', 'OVO', 'Gopay', 'QRIS'].map((bank) => (<span key={bank} className="bg-white text-blue-900 px-2 py-0.5 rounded font-bold text-[9px] shadow-sm cursor-default">{bank}</span>))}
-              </div>
-              <div className="p-3 bg-gray-800/80 backdrop-blur rounded-xl border border-gray-700 flex items-center gap-3"><span className="text-xl">🔒</span><div><p className="text-xs font-bold text-gray-200">Jaminan Keamanan 100%</p><p className="text-[9px] text-gray-400 mt-0.5">Transaksi terenkripsi & data privasi terjaga.</p></div></div>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 pt-4 text-center relative z-10"><p className="text-gray-500 text-xs">&copy; {new Date().getFullYear()} <span className="text-white font-bold">{toko.nama_toko}</span>. All rights reserved.</p></div>
-        </div>
+        <div className="relative container mx-auto px-6 z-10 text-center"><p className="text-gray-400 text-sm mb-4">Terima kasih sudah mampir di {toko.nama_toko}</p><p className="text-gray-600 text-xs opacity-50">&copy; {new Date().getFullYear()} {toko.nama_toko}. All rights reserved.</p></div>
       </footer>
     </div>
   );
