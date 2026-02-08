@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
+// 👇 IMPORT KOMPONEN BARU
+import FloatingWA from './components/FloatingWA';
 
 export default function Home() {
   const [produk, setProduk] = useState<any[]>([]);
@@ -22,8 +24,6 @@ export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedKategori, setSelectedKategori] = useState('Semua');
-
-  // 🔒 MENGAMBIL EMAIL DARI BRANKAS RAHASIA (.env.local)
   const emailBos = process.env.NEXT_PUBLIC_ADMIN_EMAIL; 
 
   const router = useRouter();
@@ -81,7 +81,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900" style={{ fontFamily: `"${toko.font_style}", sans-serif` }}>
-      <Toaster position="bottom-right" />
+      <Toaster position="bottom-left" />
+      
+      {/* 👇 PASANG TOMBOL WA DISINI */}
+      <FloatingWA />
+
       <style jsx global>{` @import url('${fontMap[toko.font_style] || fontMap['Inter']}'); `}</style>
 
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-2.5' : 'bg-transparent py-4'}`}>
