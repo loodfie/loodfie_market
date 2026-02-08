@@ -21,6 +21,46 @@ function PopupIklan({ gambar, onClose }: { gambar: string, onClose: () => void }
     );
 }
 
+// 🔥 POPUP INPUT TESTIMONI (UNTUK KLIEN)
+function PopupTestimoni({ onClose }: { onClose: () => void }) {
+    const [nama, setNama] = useState('');
+    const [role, setRole] = useState('');
+    const [text, setText] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const kirimTesti = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        // Default tampil = FALSE (Harus diapprove admin dulu)
+        const { error } = await supabase.from('testimoni').insert([{ nama, role, text, avatar: '👤', tampil: false }]);
+        setLoading(false);
+        if (error) {
+            toast.error("Gagal mengirim.");
+        } else {
+            toast.success("Terkirim! Menunggu persetujuan admin.", { duration: 4000 });
+            onClose();
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+            <div className="relative bg-white p-6 rounded-2xl max-w-sm w-full shadow-2xl">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-red-500">✕</button>
+                <h3 className="text-xl font-bold mb-1 text-center">Tulis Ulasan ✍️</h3>
+                <p className="text-xs text-gray-500 text-center mb-4">Bagikan pengalamanmu berbelanja di sini.</p>
+                <form onSubmit={kirimTesti} className="space-y-3">
+                    <input required className="w-full p-3 bg-gray-50 rounded-xl text-sm border focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nama Kamu" value={nama} onChange={e => setNama(e.target.value)} />
+                    <input required className="w-full p-3 bg-gray-50 rounded-xl text-sm border focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Pekerjaan (cth: Mahasiswa)" value={role} onChange={e => setRole(e.target.value)} />
+                    <textarea required className="w-full p-3 bg-gray-50 rounded-xl text-sm border focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none" placeholder="Ceritakan kepuasanmu..." value={text} onChange={e => setText(e.target.value)}></textarea>
+                    <button disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg disabled:opacity-50">
+                        {loading ? 'Mengirim...' : 'Kirim Ulasan 🚀'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 export default function Home() {
   const [produk, setProduk] = useState<any[]>([]);
   const [filteredProduk, setFilteredProduk] = useState<any[]>([]);
@@ -36,7 +76,9 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedKategori, setSelectedKategori] = useState('Semua');
   const [showPopup, setShowPopup] = useState(false);
+  const [showTestiForm, setShowTestiForm] = useState(false); // 🔥 STATE POPUP TESTI
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [testimoni, setTestimoni] = useState<any[]>([]);
 
   const emailBos = "pordjox75@gmail.com"; 
   const router = useRouter();
@@ -46,13 +88,6 @@ export default function Home() {
     { label: "Member", value: toko.total_member, icon: <FaUsers /> },
     { label: "Terjual", value: toko.total_terjual, icon: <FaDownload /> },
     { label: "Kepuasan", value: toko.kepuasan, icon: <FaCheckCircle /> },
-  ];
-
-  // 🔥 UPDATE: TESTIMONI SOURCE CODE (DEDI) DIHAPUS
-  const testimoni = [
-    { nama: "Budi Santoso", role: "Freelancer", text: "Gila sih, template-nya premium banget! Hemat waktu ngerjain projek klien. Balik modal berkali-kali lipat!", avatar: "👨‍💻" },
-    { nama: "Siti Aminah", role: "Content Creator", text: "Ebook-nya daging semua isinya. Bahasanya mudah dimengerti buat pemula kayak saya. Makasih Loodfie Market!", avatar: "🧕" },
-    { nama: "Rizky Billar", role: "Youtuber", text: "Video course-nya gampang dipraktekin. Langsung bisa bikin konten viral!", avatar: "📹" },
   ];
 
   const faqList = [
@@ -67,12 +102,25 @@ export default function Home() {
   useEffect(() => {
     async function initData() {
       const { data: { session } } = await supabase.auth.getSession(); setUser(session?.user || null);
+      
       const { data: dataProduk } = await supabase.from('produk').select('*').order('id', { ascending: false });
       if (dataProduk) { setProduk(dataProduk); setFilteredProduk(dataProduk); }
+      
       const { data: dataToko } = await supabase.from('toko').select('*').single();
       if (dataToko) {
           setToko(prev => ({ ...prev, ...dataToko, running_text: dataToko.running_text || prev.running_text }));
           if (dataToko.popup_image) setShowPopup(true);
+      }
+
+      // 🔥 FILTER: HANYA TAMPILKAN YANG SUDAH DI-APPROVE (tampil = true)
+      const { data: dataTesti } = await supabase.from('testimoni').select('*').eq('tampil', true).order('id', { ascending: false });
+      if (dataTesti && dataTesti.length > 0) {
+          setTestimoni(dataTesti);
+      } else {
+          setTestimoni([
+            { nama: "Budi Santoso", role: "Freelancer", text: "Gila sih, template-nya premium banget! Hemat waktu ngerjain projek klien.", avatar: "👨‍💻" },
+            { nama: "Siti Aminah", role: "Content Creator", text: "Ebook-nya daging semua isinya. Bahasanya mudah dimengerti.", avatar: "🧕" },
+          ]);
       }
     }
     initData();
@@ -89,6 +137,9 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 text-gray-900" style={{ fontFamily: `"${toko.font_style}", sans-serif` }}>
       <Toaster position="bottom-left" /> <FloatingWA />
       {showPopup && toko.popup_image && (<PopupIklan gambar={toko.popup_image} onClose={() => setShowPopup(false)} />)}
+      {/* 🔥 FORM INPUT KLIEN */}
+      {showTestiForm && <PopupTestimoni onClose={() => setShowTestiForm(false)} />}
+      
       <style jsx global>{` @import url('${fontMap[toko.font_style] || fontMap['Inter']}'); `}</style>
 
       {/* NAVBAR */}
@@ -129,7 +180,6 @@ export default function Home() {
         <div className="max-w-4xl mx-auto mb-8">
             <div className="bg-white p-3 rounded-xl shadow-md border border-gray-100 flex flex-col md:flex-row gap-3 items-center">
                 <input type="text" placeholder="Cari produk..." className="w-full pl-4 pr-4 py-2 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                {/* 🔥 UPDATE: KATEGORI SOURCE CODE DIHAPUS */}
                 <div className="flex gap-2 w-full md:w-auto overflow-x-auto scrollbar-hide">{['Semua', 'Ebook', 'Template', 'Video'].map((kat) => (<button key={kat} onClick={() => setSelectedKategori(kat)} className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${selectedKategori === kat ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{kat}</button>))}</div>
             </div>
         </div>
@@ -146,7 +196,36 @@ export default function Home() {
         )}
       </div>
 
-      <section className="bg-blue-50 py-12 mt-12"><div className="container mx-auto px-6"><h2 className="text-2xl font-bold text-center mb-8 flex items-center justify-center gap-2">💬 Apa Kata Mereka?</h2><div className="grid grid-cols-1 md:grid-cols-3 gap-6">{testimoni.map((user, idx) => (<div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border border-blue-100"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-xl">{user.avatar}</div><div><p className="font-bold text-sm text-gray-900">{user.nama}</p><p className="text-xs text-gray-500">{user.role}</p></div></div><p className="text-gray-600 text-sm italic">"{user.text}"</p><div className="flex text-yellow-400 text-xs mt-3 gap-0.5"><FaStar /><FaStar /><FaStar /><FaStar /><FaStar /></div></div>))}</div></div></section>
+      {/* TESTIMONI DINAMIS */}
+      <section className="bg-blue-50 py-12 mt-12">
+        <div className="container mx-auto px-6">
+            <h2 className="text-2xl font-bold text-center mb-4 flex items-center justify-center gap-2">💬 Apa Kata Mereka?</h2>
+            {/* 🔥 TOMBOL KIRIM TESTI */}
+            <div className="flex justify-center mb-8">
+                <button onClick={() => setShowTestiForm(true)} className="bg-white border border-blue-200 text-blue-600 px-5 py-2 rounded-full font-bold text-xs hover:bg-blue-600 hover:text-white transition shadow-sm flex items-center gap-2">
+                    ✍️ Tulis Ulasan
+                </button>
+            </div>
+            {testimoni.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {testimoni.map((user, idx) => (
+                        <div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border border-blue-100">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-xl">{user.avatar}</div>
+                                <div><p className="font-bold text-sm text-gray-900">{user.nama}</p><p className="text-xs text-gray-500">{user.role}</p></div>
+                            </div>
+                            <p className="text-gray-600 text-sm italic">"{user.text}"</p>
+                            <div className="flex text-yellow-400 text-xs mt-3 gap-0.5"><FaStar /><FaStar /><FaStar /><FaStar /><FaStar /></div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-center text-gray-400 text-sm italic">Belum ada testimoni. Jadilah yang pertama!</p>
+            )}
+        </div>
+      </section>
+
+      {/* FAQ SECTION */}
       <section className="container mx-auto px-6 py-12"><div className="max-w-3xl mx-auto"><h2 className="text-2xl font-bold text-center mb-8">❓ FAQ</h2><div className="space-y-4">{faqList.map((item, index) => (<div key={index} className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition"><button onClick={() => toggleFaq(index)} className={`w-full flex justify-between items-center p-4 text-left font-bold text-sm transition-colors ${openFaq === index ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-800 hover:bg-gray-50'}`}><span>{item.tanya}</span>{openFaq === index ? <FaChevronUp className="text-blue-500"/> : <FaChevronDown className="text-gray-400"/>}</button>{openFaq === index && (<div className="p-4 bg-gray-50 text-sm text-gray-600 border-t border-gray-100 leading-relaxed animate-fadeIn">{item.jawab}</div>)}</div>))}</div></div></section>
       
       <footer className="relative bg-gray-900 text-white pt-10 pb-6 border-t-4 border-blue-500 overflow-hidden">
