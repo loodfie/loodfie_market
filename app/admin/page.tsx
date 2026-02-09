@@ -11,8 +11,8 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
   
-  // TAB ADMIN
-  const [activeTab, setActiveTab] = useState<'produk' | 'tampilan' | 'testimoni'>('produk');
+  // TAB ADMIN (Sekarang ada 4 Tab!)
+  const [activeTab, setActiveTab] = useState<'produk' | 'transaksi' | 'tampilan' | 'testimoni'>('produk');
 
   // STATE PRODUK
   const [idProduk, setIdProduk] = useState<number | null>(null);
@@ -22,16 +22,19 @@ export default function AdminPage() {
   const [deskripsi, setDeskripsi] = useState('');
   const [kategori, setKategori] = useState('Ebook');
   const [linkMayar, setLinkMayar] = useState('');
-  
-  // 🔥 STATE FILE PRODUK
   const [fileProduk, setFileProduk] = useState<File | null>(null);
   const [linkFileManual, setLinkFileManual] = useState('');
   const [urlFileDatabase, setUrlFileDatabase] = useState('');
-
   const [fileGambar, setFileGambar] = useState<File | null>(null);
   const [gambarLama, setGambarLama] = useState(''); 
   const [uploading, setUploading] = useState(false);
   const [daftarProduk, setDaftarProduk] = useState<any[]>([]);
+
+  // 🔥 STATE TRANSAKSI (KASIR)
+  const [emailPembeli, setEmailPembeli] = useState('');
+  const [produkDipilih, setProdukDipilih] = useState<string>('');
+  const [riwayatTransaksi, setRiwayatTransaksi] = useState<any[]>([]);
+  const [loadingTrx, setLoadingTrx] = useState(false);
 
   // STATE TAMPILAN
   const [toko, setToko] = useState<any>({});
@@ -59,6 +62,7 @@ export default function AdminPage() {
       }
       setIsAdmin(true);
       ambilDaftarProduk();
+      ambilRiwayatTransaksi(); // 🔥 Ambil data transaksi
       ambilDataToko();
       ambilDaftarTesti();
       setLoading(false);
@@ -69,75 +73,70 @@ export default function AdminPage() {
   async function ambilDaftarProduk() { const { data } = await supabase.from('produk').select('*').order('id', { ascending: false }); if (data) setDaftarProduk(data); }
   async function ambilDataToko() { const { data } = await supabase.from('toko').select('*').single(); if (data) setToko(data); }
   async function ambilDaftarTesti() { const { data } = await supabase.from('testimoni').select('*').order('id', { ascending: false }); if (data) setDaftarTesti(data); }
+  
+  // 🔥 FUNGSI KASIR (TRANSAKSI)
+  async function ambilRiwayatTransaksi() {
+      const { data } = await supabase
+        .from('transaksi')
+        .select(`
+            id, created_at, user_email, status,
+            produk:produk_id ( nama_produk )
+        `)
+        .order('id', { ascending: false })
+        .limit(50); // Ambil 50 transaksi terakhir biar ringan
+      if (data) setRiwayatTransaksi(data);
+  }
 
-  // --- LOGIKA PRODUK ---
-  const handleEditClick = (produk: any) => { 
-      setIdProduk(produk.id); 
-      setNama(produk.nama_produk); 
-      setHarga(produk.harga); 
-      setHargaCoret(produk.harga_coret || ''); 
-      setDeskripsi(produk.deskripsi || ''); 
-      setKategori(produk.kategori); 
-      setLinkMayar(produk.link_mayar || ''); 
-      setGambarLama(produk.gambar); 
-      setFileGambar(null);
-      // 🔥 Set Link File
-      setUrlFileDatabase(produk.file_url || '');
-      setLinkFileManual(produk.file_url || ''); 
-      setFileProduk(null);
+  const handleBeriAkses = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!emailPembeli || !produkDipilih) { toast.error("Email & Produk wajib diisi!"); return; }
+      
+      setLoadingTrx(true);
+      const toastId = toast.loading("Memproses Akses...");
 
-      window.scrollTo({ top: 0, behavior: 'smooth' }); 
-      toast("✏️ Mode Edit Aktif", { icon: '📝' }); 
+      try {
+          const { error } = await supabase.from('transaksi').insert([
+              { user_email: emailPembeli, produk_id: Number(produkDipilih), status: 'LUNAS' }
+          ]);
+          
+          if (error) throw error;
+          
+          toast.success("✅ Akses Berhasil Diberikan!", { id: toastId });
+          setEmailPembeli('');
+          setProdukDipilih('');
+          ambilRiwayatTransaksi();
+      } catch (err: any) {
+          toast.error("Gagal: " + err.message, { id: toastId });
+      } finally {
+          setLoadingTrx(false);
+      }
   };
 
-  const handleBatalEdit = () => { 
-      setIdProduk(null); setNama(''); setHarga(''); setHargaCoret(''); setDeskripsi(''); setKategori('Ebook'); setLinkMayar(''); setFileGambar(null); setGambarLama(''); 
-      setFileProduk(null); setLinkFileManual(''); setUrlFileDatabase('');
-      toast("Mode edit dibatalkan", { icon: '❌' }); 
+  const handleCabutAkses = async (id: number) => {
+      if (!confirm("Yakin ingin mencabut akses user ini?")) return;
+      await supabase.from('transaksi').delete().eq('id', id);
+      toast.success("Akses Dicabut 🚫");
+      ambilRiwayatTransaksi();
   };
 
+  // --- LOGIKA PRODUK (Sama) ---
+  const handleEditClick = (produk: any) => { setIdProduk(produk.id); setNama(produk.nama_produk); setHarga(produk.harga); setHargaCoret(produk.harga_coret || ''); setDeskripsi(produk.deskripsi || ''); setKategori(produk.kategori); setLinkMayar(produk.link_mayar || ''); setGambarLama(produk.gambar); setFileGambar(null); setUrlFileDatabase(produk.file_url || ''); setLinkFileManual(produk.file_url || ''); setFileProduk(null); window.scrollTo({ top: 0, behavior: 'smooth' }); toast("✏️ Mode Edit Aktif", { icon: '📝' }); };
+  const handleBatalEdit = () => { setIdProduk(null); setNama(''); setHarga(''); setHargaCoret(''); setDeskripsi(''); setKategori('Ebook'); setLinkMayar(''); setFileGambar(null); setGambarLama(''); setFileProduk(null); setLinkFileManual(''); setUrlFileDatabase(''); toast("Mode edit dibatalkan", { icon: '❌' }); };
   const handleSimpanProduk = async (e: React.FormEvent) => {
     e.preventDefault(); setUploading(true); const toastId = toast.loading('Sedang memproses...');
     try {
-      // 1. Upload Gambar
       let urlGambar = gambarLama; 
-      if (fileGambar) {
-        const namaFile = `img-${Date.now()}-${fileGambar.name}`;
-        const { error } = await supabase.storage.from('gambar-produk').upload(namaFile, fileGambar);
-        if (error) throw error;
-        urlGambar = supabase.storage.from('gambar-produk').getPublicUrl(namaFile).data.publicUrl;
-      }
-
-      // 2. Upload FILE PRODUK (PDF/Zip) 🔥
+      if (fileGambar) { const n = `img-${Date.now()}-${fileGambar.name}`; await supabase.storage.from('gambar-produk').upload(n, fileGambar); urlGambar = supabase.storage.from('gambar-produk').getPublicUrl(n).data.publicUrl; }
       let finalFileUrl = linkFileManual;
-      if (fileProduk) {
-          const namaFileProduk = `file-${Date.now()}-${fileProduk.name}`;
-          const { error: errFile } = await supabase.storage.from('file-produk').upload(namaFileProduk, fileProduk);
-          if (errFile) throw errFile;
-          finalFileUrl = supabase.storage.from('file-produk').getPublicUrl(namaFileProduk).data.publicUrl;
-      }
-
-      const payload = { 
-          nama_produk: nama, 
-          harga: Number(harga), 
-          harga_coret: hargaCoret ? Number(hargaCoret) : null, 
-          deskripsi: deskripsi, 
-          kategori: kategori, 
-          link_mayar: linkMayar, 
-          gambar: urlGambar || 'https://via.placeholder.com/300',
-          file_url: finalFileUrl 
-      };
-
-      if (idProduk) { await supabase.from('produk').update(payload).eq('id', idProduk); toast.success("Produk Update!", { id: toastId }); } 
-      else { await supabase.from('produk').insert([payload]); toast.success("Produk Baru!", { id: toastId }); }
-      
+      if (fileProduk) { const n = `file-${Date.now()}-${fileProduk.name}`; await supabase.storage.from('file-produk').upload(n, fileProduk); finalFileUrl = supabase.storage.from('file-produk').getPublicUrl(n).data.publicUrl; }
+      const payload = { nama_produk: nama, harga: Number(harga), harga_coret: hargaCoret ? Number(hargaCoret) : null, deskripsi: deskripsi, kategori: kategori, link_mayar: linkMayar, gambar: urlGambar || 'https://via.placeholder.com/300', file_url: finalFileUrl };
+      if (idProduk) { await supabase.from('produk').update(payload).eq('id', idProduk); toast.success("Produk Update!", { id: toastId }); } else { await supabase.from('produk').insert([payload]); toast.success("Produk Baru!", { id: toastId }); }
       handleBatalEdit(); ambilDaftarProduk(); 
     } catch (err: any) { toast.error("Gagal: " + err.message, { id: toastId }); } finally { setUploading(false); }
   };
-  
   const handleHapusProduk = async (id: number) => { if (!confirm("Yakin hapus?")) return; await supabase.from('produk').delete().eq('id', id); toast.success("Terhapus!"); ambilDaftarProduk(); if (idProduk === id) handleBatalEdit(); };
 
-  // --- LOGIKA TAMPILAN ---
+  // --- LOGIKA TAMPILAN & TESTIMONI (Sama) ---
   const handleHapusPopup = async () => { if (!confirm("Hapus Pop-up?")) return; const toastId = toast.loading("Menghapus..."); try { await supabase.from('toko').update({ popup_image: null }).eq('id', toko.id); setToko({ ...toko, popup_image: null }); setFilePopup(null); toast.success("Dihapus!", { id: toastId }); } catch (err: any) { toast.error(err.message, { id: toastId }); } };
   const handleUpdateTampilan = async (e: React.FormEvent) => {
     e.preventDefault(); setSavingTema(true); const toastId = toast.loading("Menyimpan...");
@@ -151,17 +150,7 @@ export default function AdminPage() {
         toast.success("Tampilan Update! ✨", { id: toastId }); ambilDataToko(); 
     } catch (err: any) { toast.error("Gagal: " + err.message, { id: toastId }); } finally { setSavingTema(false); }
   };
-
-  // --- LOGIKA TESTIMONI ---
-  const handleSimpanTesti = async (e: React.FormEvent) => {
-    e.preventDefault(); const toastId = toast.loading("Menyimpan...");
-    try {
-        const payload = { nama: namaTesti, role: roleTesti, text: textTesti, avatar: avatarTesti, tampil: true };
-        if (idTesti) { await supabase.from('testimoni').update(payload).eq('id', idTesti); toast.success("Testimoni Update!", { id: toastId }); }
-        else { await supabase.from('testimoni').insert([payload]); toast.success("Testimoni Ditambah!", { id: toastId }); }
-        setNamaTesti(''); setRoleTesti(''); setTextTesti(''); setIdTesti(null); ambilDaftarTesti();
-    } catch (err: any) { toast.error("Gagal: " + err.message, { id: toastId }); }
-  };
+  const handleSimpanTesti = async (e: React.FormEvent) => { e.preventDefault(); const toastId = toast.loading("Menyimpan..."); try { const payload = { nama: namaTesti, role: roleTesti, text: textTesti, avatar: avatarTesti, tampil: true }; if (idTesti) { await supabase.from('testimoni').update(payload).eq('id', idTesti); toast.success("Testimoni Update!", { id: toastId }); } else { await supabase.from('testimoni').insert([payload]); toast.success("Testimoni Ditambah!", { id: toastId }); } setNamaTesti(''); setRoleTesti(''); setTextTesti(''); setIdTesti(null); ambilDaftarTesti(); } catch (err: any) { toast.error("Gagal: " + err.message, { id: toastId }); } };
   const toggleStatusTesti = async (id: number, statusSaatIni: boolean) => { await supabase.from('testimoni').update({ tampil: !statusSaatIni }).eq('id', id); toast.success(statusSaatIni ? "Hidden 🚫" : "Tampil ✅"); ambilDaftarTesti(); };
   const handleEditTesti = (t: any) => { setIdTesti(t.id); setNamaTesti(t.nama); setRoleTesti(t.role); setTextTesti(t.text); setAvatarTesti(t.avatar); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const handleHapusTesti = async (id: number) => { if(!confirm("Hapus?")) return; await supabase.from('testimoni').delete().eq('id', id); toast.success("Dihapus!"); ambilDaftarTesti(); };
@@ -177,13 +166,15 @@ export default function AdminPage() {
         {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div className="flex items-center gap-4"><Link href="/" className="bg-gray-800 text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-900 transition shadow-lg flex items-center gap-2">⬅️ Kembali ke Home</Link><h1 className="text-3xl font-bold text-gray-800">⚙️ Admin Control</h1></div>
-            <div className="bg-white p-1 rounded-xl shadow-sm flex gap-2">
-                <button onClick={() => setActiveTab('produk')} className={`px-4 md:px-6 py-2 rounded-lg font-bold transition text-xs md:text-sm ${activeTab === 'produk' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>📦 Produk</button>
-                <button onClick={() => setActiveTab('tampilan')} className={`px-4 md:px-6 py-2 rounded-lg font-bold transition text-xs md:text-sm ${activeTab === 'tampilan' ? 'bg-purple-600 text-white' : 'text-gray-500'}`}>🎨 Tampilan</button>
-                <button onClick={() => setActiveTab('testimoni')} className={`px-4 md:px-6 py-2 rounded-lg font-bold transition text-xs md:text-sm ${activeTab === 'testimoni' ? 'bg-green-600 text-white' : 'text-gray-500'}`}>💬 Testimoni</button>
+            <div className="bg-white p-1 rounded-xl shadow-sm flex gap-2 flex-wrap justify-center">
+                <button onClick={() => setActiveTab('produk')} className={`px-4 py-2 rounded-lg font-bold transition text-xs md:text-sm ${activeTab === 'produk' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>📦 Produk</button>
+                <button onClick={() => setActiveTab('transaksi')} className={`px-4 py-2 rounded-lg font-bold transition text-xs md:text-sm ${activeTab === 'transaksi' ? 'bg-orange-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>💰 Kasir</button>
+                <button onClick={() => setActiveTab('tampilan')} className={`px-4 py-2 rounded-lg font-bold transition text-xs md:text-sm ${activeTab === 'tampilan' ? 'bg-purple-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>🎨 Tampilan</button>
+                <button onClick={() => setActiveTab('testimoni')} className={`px-4 py-2 rounded-lg font-bold transition text-xs md:text-sm ${activeTab === 'testimoni' ? 'bg-green-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>💬 Testimoni</button>
             </div>
         </div>
 
+        {/* --- TAB PRODUK --- */}
         {activeTab === 'produk' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-lg h-fit sticky top-4">
@@ -194,16 +185,7 @@ export default function AdminPage() {
                         <select className="w-full p-2 border rounded-lg bg-white" value={kategori} onChange={e => setKategori(e.target.value)}><option>Ebook</option><option>Template</option><option>Video</option></select>
                         <textarea placeholder="Deskripsi" className="w-full p-2 border rounded-lg" rows={3} value={deskripsi} onChange={e => setDeskripsi(e.target.value)}></textarea>
                         <input type="text" placeholder="Link Mayar/Google" className="w-full p-2 border rounded-lg" value={linkMayar} onChange={e => setLinkMayar(e.target.value)} />
-                        
-                        {/* 🔥 INPUT FILE PRODUK */}
-                        <div className="bg-blue-50 p-3 border border-blue-200 rounded-lg">
-                            <label className="text-xs font-bold text-blue-800 mb-1 block">📁 File Produk (PDF/Zip)</label>
-                            <input type="file" accept=".pdf,.zip,.rar,.mp4" onChange={e => setFileProduk(e.target.files?.[0] || null)} className="w-full text-sm mb-2" />
-                            <p className="text-[10px] text-gray-500 mb-2 text-center">- ATAU Link Manual -</p>
-                            <input type="text" placeholder="Paste Link GDrive / YouTube" className="w-full p-2 border rounded text-sm bg-white" value={linkFileManual} onChange={e => setLinkFileManual(e.target.value)} />
-                            {urlFileDatabase && !fileProduk && (<p className="text-[10px] text-green-600 mt-1 truncate">✅ File tersimpan: {urlFileDatabase}</p>)}
-                        </div>
-
+                        <div className="bg-blue-50 p-3 border border-blue-200 rounded-lg"><label className="text-xs font-bold text-blue-800 mb-1 block">📁 File Produk (PDF/Zip)</label><input type="file" accept=".pdf,.zip,.rar,.mp4" onChange={e => setFileProduk(e.target.files?.[0] || null)} className="w-full text-sm mb-2" /><p className="text-[10px] text-gray-500 mb-2 text-center">- ATAU Link Manual -</p><input type="text" placeholder="Paste Link GDrive / YouTube" className="w-full p-2 border rounded text-sm bg-white" value={linkFileManual} onChange={e => setLinkFileManual(e.target.value)} />{urlFileDatabase && !fileProduk && (<p className="text-[10px] text-green-600 mt-1 truncate">✅ File tersimpan: {urlFileDatabase}</p>)}</div>
                         <div className="bg-gray-50 p-2 border rounded-lg"><span className="text-xs block mb-1">Gambar Cover</span><input type="file" onChange={e => setFileGambar(e.target.files?.[0] || null)} /></div>
                         {idProduk && (<button type="button" onClick={handleBatalEdit} className="w-full py-2 bg-gray-200 rounded-lg text-sm mb-2">Batal</button>)}
                         <button disabled={uploading} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold">{uploading ? '...' : 'Simpan'}</button>
@@ -213,6 +195,71 @@ export default function AdminPage() {
             </div>
         )}
 
+        {/* --- 🔥 TAB TRANSAKSI (KASIR) 🔥 --- */}
+        {activeTab === 'transaksi' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* FORM KASIR */}
+                <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-lg h-fit sticky top-4 border border-orange-100">
+                    <h2 className="text-xl font-bold mb-4 text-orange-700">💰 Kasir Manual</h2>
+                    <p className="text-xs text-gray-500 mb-4">Gunakan ini untuk memberi akses produk ke pembeli yang sudah transfer manual.</p>
+                    <form onSubmit={handleBeriAkses} className="space-y-4">
+                        <div>
+                            <label className="text-xs font-bold text-gray-700">1. Email Pembeli</label>
+                            <input type="email" required placeholder="contoh: user@gmail.com" className="w-full p-3 border rounded-lg bg-gray-50 font-bold" value={emailPembeli} onChange={e => setEmailPembeli(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-gray-700">2. Pilih Produk</label>
+                            <select required className="w-full p-3 border rounded-lg bg-white" value={produkDipilih} onChange={e => setProdukDipilih(e.target.value)}>
+                                <option value="">-- Pilih Produk --</option>
+                                {daftarProduk.map(p => (
+                                    <option key={p.id} value={p.id}>{p.nama_produk}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <button disabled={loadingTrx} className="w-full py-3 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 transition shadow-lg">
+                            {loadingTrx ? 'Memproses...' : '✅ Beri Akses Sekarang'}
+                        </button>
+                    </form>
+                </div>
+
+                {/* RIWAYAT TRANSAKSI */}
+                <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-lg border border-orange-100">
+                    <h2 className="text-xl font-bold mb-4 border-b pb-2">📜 50 Transaksi Terakhir</h2>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left text-gray-500">
+                            <thead className="text-xs text-gray-700 uppercase bg-orange-50">
+                                <tr>
+                                    <th className="px-4 py-3">Tanggal</th>
+                                    <th className="px-4 py-3">Email User</th>
+                                    <th className="px-4 py-3">Produk</th>
+                                    <th className="px-4 py-3">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {riwayatTransaksi.length === 0 ? (
+                                    <tr><td colSpan={4} className="px-4 py-6 text-center italic">Belum ada transaksi.</td></tr>
+                                ) : (
+                                    riwayatTransaksi.map((trx) => (
+                                        <tr key={trx.id} className="bg-white border-b hover:bg-gray-50">
+                                            <td className="px-4 py-3">{new Date(trx.created_at).toLocaleDateString()}</td>
+                                            <td className="px-4 py-3 font-bold text-gray-900">{trx.user_email}</td>
+                                            <td className="px-4 py-3">{trx.produk?.nama_produk || 'Produk Dihapus'}</td>
+                                            <td className="px-4 py-3">
+                                                <button onClick={() => handleCabutAkses(trx.id)} className="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 px-2 py-1 rounded border border-red-200">
+                                                    🚫 Cabut
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* --- TAB TAMPILAN & TESTIMONI (Sama) --- */}
         {activeTab === 'tampilan' && (
             <div className="max-w-2xl mx-auto bg-white p-8 rounded-3xl shadow-xl border border-purple-100">
                 <h2 className="text-2xl font-bold mb-6 text-purple-700">🎨 Setting Tampilan</h2>
@@ -228,7 +275,6 @@ export default function AdminPage() {
                 </form>
             </div>
         )}
-
         {activeTab === 'testimoni' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-lg h-fit sticky top-4 border border-green-100">
