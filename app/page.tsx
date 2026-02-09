@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { FaWhatsapp, FaShoppingCart, FaStar, FaCheckCircle, FaInstagram, FaFacebookF, FaTiktok, FaCog } from 'react-icons/fa';
+import { FaWhatsapp, FaShoppingCart, FaStar, FaInstagram, FaFacebookF, FaTiktok, FaCog, FaEye } from 'react-icons/fa';
 import { useCart } from '@/context/CartContext';
 
 export default function Home() {
@@ -91,7 +91,7 @@ export default function Home() {
                     <span>👤 Member</span>
                 </Link>
 
-                {/* 🔥 TOMBOL ADMIN RAHASIA (IKON GEAR) */}
+                {/* TOMBOL ADMIN RAHASIA */}
                 <Link href="/admin" className="text-gray-300 hover:text-gray-800 transition p-2" title="Masuk Admin Panel">
                     <FaCog className="text-lg" />
                 </Link>
@@ -157,24 +157,41 @@ export default function Home() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
                 {products.map((item) => (
                     <Link href={`/produk/${item.id}`} key={item.id} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition duration-300 flex flex-col h-full overflow-hidden relative">
+                         
                          {item.harga_coret && item.harga_coret > item.harga && (
                             <div className="absolute top-3 right-3 z-10 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md animate-pulse">
                                 Hemat {Math.round(((item.harga_coret - item.harga) / item.harga_coret) * 100)}%
                             </div>
                          )}
+
+                         {/* 🔥 AREA GAMBAR (DENGAN EFEK OVERLAY "DETAIL") */}
                          <div className="h-48 md:h-56 bg-gray-100 relative overflow-hidden flex items-center justify-center p-4">
                             {item.gambar ? (
                                 <img src={item.gambar} alt={item.nama_produk} className="w-full h-full object-contain group-hover:scale-110 transition duration-500" />
                             ) : (
                                 <span className="text-4xl">📦</span>
                             )}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition duration-300"></div>
+                            
+                            {/* OVERLAY GELAP SAAT HOVER */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
+                                {/* TOMBOL "LIHAT DETAIL" */}
+                                <div className="bg-white/90 text-gray-900 px-4 py-2 rounded-full font-bold text-xs md:text-sm flex items-center gap-2 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition duration-300">
+                                    <FaEye className="text-blue-600" /> Lihat Detail
+                                </div>
+                            </div>
                         </div>
+
+                        {/* AREA INFORMASI (HANYA JUDUL & HARGA) */}
                         <div className="p-5 flex flex-col flex-grow">
                             <div className="mb-2">
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-1 rounded-md">{item.kategori}</span>
                             </div>
-                            <h3 className="font-bold text-gray-800 text-sm md:text-lg mb-2 line-clamp-2 leading-snug group-hover:text-blue-600 transition">{item.nama_produk}</h3>
+                            <h3 className="font-bold text-gray-800 text-sm md:text-lg mb-2 line-clamp-2 leading-snug group-hover:text-blue-600 transition">
+                                {item.nama_produk}
+                            </h3>
+                            
+                            {/* Deskripsi dihilangkan agar tampilan bersih & user penasaran klik detail */}
+
                             <div className="mt-auto pt-4 border-t border-gray-50 flex flex-col gap-1">
                                 {item.harga_coret && (
                                     <span className="text-xs text-gray-400 line-through">Rp {Number(item.harga_coret).toLocaleString('id-ID')}</span>
