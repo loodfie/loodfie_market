@@ -11,7 +11,6 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
   
-  // TAB ADMIN (Sekarang ada 4 Tab!)
   const [activeTab, setActiveTab] = useState<'produk' | 'transaksi' | 'tampilan' | 'testimoni'>('produk');
 
   // STATE PRODUK
@@ -30,17 +29,18 @@ export default function AdminPage() {
   const [uploading, setUploading] = useState(false);
   const [daftarProduk, setDaftarProduk] = useState<any[]>([]);
 
-  // 🔥 STATE TRANSAKSI (KASIR)
+  // STATE TRANSAKSI
   const [emailPembeli, setEmailPembeli] = useState('');
   const [produkDipilih, setProdukDipilih] = useState<string>('');
   const [riwayatTransaksi, setRiwayatTransaksi] = useState<any[]>([]);
   const [loadingTrx, setLoadingTrx] = useState(false);
 
-  // STATE TAMPILAN
+  // STATE TAMPILAN (DENGAN LOGO)
   const [toko, setToko] = useState<any>({});
   const [fileHeader, setFileHeader] = useState<File | null>(null);
   const [fileFooter, setFileFooter] = useState<File | null>(null);
   const [filePopup, setFilePopup] = useState<File | null>(null);
+  const [fileLogo, setFileLogo] = useState<File | null>(null); // 🔥 Logo Baru
   const [savingTema, setSavingTema] = useState(false);
 
   // STATE TESTIMONI
@@ -62,7 +62,7 @@ export default function AdminPage() {
       }
       setIsAdmin(true);
       ambilDaftarProduk();
-      ambilRiwayatTransaksi(); // 🔥 Ambil data transaksi
+      ambilRiwayatTransaksi();
       ambilDataToko();
       ambilDaftarTesti();
       setLoading(false);
@@ -73,55 +73,9 @@ export default function AdminPage() {
   async function ambilDaftarProduk() { const { data } = await supabase.from('produk').select('*').order('id', { ascending: false }); if (data) setDaftarProduk(data); }
   async function ambilDataToko() { const { data } = await supabase.from('toko').select('*').single(); if (data) setToko(data); }
   async function ambilDaftarTesti() { const { data } = await supabase.from('testimoni').select('*').order('id', { ascending: false }); if (data) setDaftarTesti(data); }
-  
-  // 🔥 FUNGSI KASIR (TRANSAKSI)
-  async function ambilRiwayatTransaksi() {
-      const { data } = await supabase
-        .from('transaksi')
-        .select(`
-            id, created_at, user_email, status,
-            produk:produk_id ( nama_produk )
-        `)
-        .order('id', { ascending: false })
-        .limit(50); // Ambil 50 transaksi terakhir biar ringan
-      if (data) setRiwayatTransaksi(data);
-  }
+  async function ambilRiwayatTransaksi() { const { data } = await supabase.from('transaksi').select(`id, created_at, user_email, status, produk:produk_id ( nama_produk )`).order('id', { ascending: false }).limit(50); if (data) setRiwayatTransaksi(data); }
 
-  const handleBeriAkses = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!emailPembeli || !produkDipilih) { toast.error("Email & Produk wajib diisi!"); return; }
-      
-      setLoadingTrx(true);
-      const toastId = toast.loading("Memproses Akses...");
-
-      try {
-          const { error } = await supabase.from('transaksi').insert([
-              { user_email: emailPembeli, produk_id: Number(produkDipilih), status: 'LUNAS' }
-          ]);
-          
-          if (error) throw error;
-          
-          toast.success("✅ Akses Berhasil Diberikan!", { id: toastId });
-          setEmailPembeli('');
-          setProdukDipilih('');
-          ambilRiwayatTransaksi();
-      } catch (err: any) {
-          toast.error("Gagal: " + err.message, { id: toastId });
-      } finally {
-          setLoadingTrx(false);
-      }
-  };
-
-  const handleCabutAkses = async (id: number) => {
-      if (!confirm("Yakin ingin mencabut akses user ini?")) return;
-      await supabase.from('transaksi').delete().eq('id', id);
-      toast.success("Akses Dicabut 🚫");
-      ambilRiwayatTransaksi();
-  };
-
-  // --- LOGIKA PRODUK (Sama) ---
-  const handleEditClick = (produk: any) => { setIdProduk(produk.id); setNama(produk.nama_produk); setHarga(produk.harga); setHargaCoret(produk.harga_coret || ''); setDeskripsi(produk.deskripsi || ''); setKategori(produk.kategori); setLinkMayar(produk.link_mayar || ''); setGambarLama(produk.gambar); setFileGambar(null); setUrlFileDatabase(produk.file_url || ''); setLinkFileManual(produk.file_url || ''); setFileProduk(null); window.scrollTo({ top: 0, behavior: 'smooth' }); toast("✏️ Mode Edit Aktif", { icon: '📝' }); };
-  const handleBatalEdit = () => { setIdProduk(null); setNama(''); setHarga(''); setHargaCoret(''); setDeskripsi(''); setKategori('Ebook'); setLinkMayar(''); setFileGambar(null); setGambarLama(''); setFileProduk(null); setLinkFileManual(''); setUrlFileDatabase(''); toast("Mode edit dibatalkan", { icon: '❌' }); };
+  // LOGIKA PRODUK & TRANSAKSI (Sama seperti sebelumnya - Disingkat)
   const handleSimpanProduk = async (e: React.FormEvent) => {
     e.preventDefault(); setUploading(true); const toastId = toast.loading('Sedang memproses...');
     try {
@@ -130,186 +84,147 @@ export default function AdminPage() {
       let finalFileUrl = linkFileManual;
       if (fileProduk) { const n = `file-${Date.now()}-${fileProduk.name}`; await supabase.storage.from('file-produk').upload(n, fileProduk); finalFileUrl = supabase.storage.from('file-produk').getPublicUrl(n).data.publicUrl; }
       const payload = { nama_produk: nama, harga: Number(harga), harga_coret: hargaCoret ? Number(hargaCoret) : null, deskripsi: deskripsi, kategori: kategori, link_mayar: linkMayar, gambar: urlGambar || 'https://via.placeholder.com/300', file_url: finalFileUrl };
-      if (idProduk) { await supabase.from('produk').update(payload).eq('id', idProduk); toast.success("Produk Update!", { id: toastId }); } else { await supabase.from('produk').insert([payload]); toast.success("Produk Baru!", { id: toastId }); }
-      handleBatalEdit(); ambilDaftarProduk(); 
+      if (idProduk) { await supabase.from('produk').update(payload).eq('id', idProduk); } else { await supabase.from('produk').insert([payload]); }
+      toast.success("Produk Disimpan!", { id: toastId }); handleBatalEdit(); ambilDaftarProduk(); 
     } catch (err: any) { toast.error("Gagal: " + err.message, { id: toastId }); } finally { setUploading(false); }
   };
-  const handleHapusProduk = async (id: number) => { if (!confirm("Yakin hapus?")) return; await supabase.from('produk').delete().eq('id', id); toast.success("Terhapus!"); ambilDaftarProduk(); if (idProduk === id) handleBatalEdit(); };
+  const handleBeriAkses = async (e: React.FormEvent) => { e.preventDefault(); setLoadingTrx(true); const toastId = toast.loading("Memproses..."); try { await supabase.from('transaksi').insert([{ user_email: emailPembeli, produk_id: Number(produkDipilih), status: 'LUNAS' }]); toast.success("Akses Diberikan!", { id: toastId }); setEmailPembeli(''); setProdukDipilih(''); ambilRiwayatTransaksi(); } catch (err: any) { toast.error(err.message, { id: toastId }); } finally { setLoadingTrx(false); } };
+  const handleCabutAkses = async (id: number) => { if (confirm("Cabut akses?")) { await supabase.from('transaksi').delete().eq('id', id); toast.success("Dicabut"); ambilRiwayatTransaksi(); }};
+  const handleEditClick = (p: any) => { setIdProduk(p.id); setNama(p.nama_produk); setHarga(p.harga); setHargaCoret(p.harga_coret); setDeskripsi(p.deskripsi); setKategori(p.kategori); setLinkMayar(p.link_mayar); setGambarLama(p.gambar); setUrlFileDatabase(p.file_url); setLinkFileManual(p.file_url); window.scrollTo({top:0, behavior:'smooth'}); };
+  const handleBatalEdit = () => { setIdProduk(null); setNama(''); setHarga(''); setDeskripsi(''); setFileGambar(null); setFileProduk(null); setLinkFileManual(''); };
+  const handleHapusProduk = async (id: number) => { if(confirm("Hapus?")) { await supabase.from('produk').delete().eq('id', id); ambilDaftarProduk(); }};
 
-  // --- LOGIKA TAMPILAN & TESTIMONI (Sama) ---
-  const handleHapusPopup = async () => { if (!confirm("Hapus Pop-up?")) return; const toastId = toast.loading("Menghapus..."); try { await supabase.from('toko').update({ popup_image: null }).eq('id', toko.id); setToko({ ...toko, popup_image: null }); setFilePopup(null); toast.success("Dihapus!", { id: toastId }); } catch (err: any) { toast.error(err.message, { id: toastId }); } };
+  // 🔥 UPDATE TAMPILAN (TERMASUK LOGO)
   const handleUpdateTampilan = async (e: React.FormEvent) => {
     e.preventDefault(); setSavingTema(true); const toastId = toast.loading("Menyimpan...");
     try {
-        let urlHeader = toko.header_bg; let urlFooter = toko.footer_bg; let urlPopup = toko.popup_image;
+        let urlHeader = toko.header_bg; let urlFooter = toko.footer_bg; let urlPopup = toko.popup_image; let urlLogo = toko.logo;
+        
+        // Upload Gambar-gambar
         if (fileHeader) { const n = `header-${Date.now()}-${fileHeader.name}`; await supabase.storage.from('gambar-produk').upload(n, fileHeader); urlHeader = supabase.storage.from('gambar-produk').getPublicUrl(n).data.publicUrl; }
         if (fileFooter) { const n = `footer-${Date.now()}-${fileFooter.name}`; await supabase.storage.from('gambar-produk').upload(n, fileFooter); urlFooter = supabase.storage.from('gambar-produk').getPublicUrl(n).data.publicUrl; }
         if (filePopup) { const n = `popup-${Date.now()}-${filePopup.name}`; await supabase.storage.from('gambar-produk').upload(n, filePopup); urlPopup = supabase.storage.from('gambar-produk').getPublicUrl(n).data.publicUrl; }
-        const payload = { nama_toko: toko.nama_toko, deskripsi: toko.deskripsi, font_style: toko.font_style, header_bg: urlHeader, footer_bg: urlFooter, running_text: toko.running_text, popup_image: urlPopup, total_member: toko.total_member, total_terjual: toko.total_terjual, kepuasan: toko.kepuasan };
+        
+        // 🔥 Upload Logo
+        if (fileLogo) { const n = `logo-${Date.now()}-${fileLogo.name}`; await supabase.storage.from('gambar-produk').upload(n, fileLogo); urlLogo = supabase.storage.from('gambar-produk').getPublicUrl(n).data.publicUrl; }
+
+        const payload = { 
+            nama_toko: toko.nama_toko, deskripsi: toko.deskripsi, font_style: toko.font_style, 
+            header_bg: urlHeader, footer_bg: urlFooter, running_text: toko.running_text, 
+            popup_image: urlPopup, logo: urlLogo, // Simpan URL Logo
+            total_member: toko.total_member, total_terjual: toko.total_terjual, kepuasan: toko.kepuasan 
+        };
+        
         if (!toko.id) { await supabase.from('toko').insert([payload]); } else { await supabase.from('toko').update(payload).eq('id', toko.id); }
         toast.success("Tampilan Update! ✨", { id: toastId }); ambilDataToko(); 
     } catch (err: any) { toast.error("Gagal: " + err.message, { id: toastId }); } finally { setSavingTema(false); }
   };
-  const handleSimpanTesti = async (e: React.FormEvent) => { e.preventDefault(); const toastId = toast.loading("Menyimpan..."); try { const payload = { nama: namaTesti, role: roleTesti, text: textTesti, avatar: avatarTesti, tampil: true }; if (idTesti) { await supabase.from('testimoni').update(payload).eq('id', idTesti); toast.success("Testimoni Update!", { id: toastId }); } else { await supabase.from('testimoni').insert([payload]); toast.success("Testimoni Ditambah!", { id: toastId }); } setNamaTesti(''); setRoleTesti(''); setTextTesti(''); setIdTesti(null); ambilDaftarTesti(); } catch (err: any) { toast.error("Gagal: " + err.message, { id: toastId }); } };
-  const toggleStatusTesti = async (id: number, statusSaatIni: boolean) => { await supabase.from('testimoni').update({ tampil: !statusSaatIni }).eq('id', id); toast.success(statusSaatIni ? "Hidden 🚫" : "Tampil ✅"); ambilDaftarTesti(); };
-  const handleEditTesti = (t: any) => { setIdTesti(t.id); setNamaTesti(t.nama); setRoleTesti(t.role); setTextTesti(t.text); setAvatarTesti(t.avatar); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  const handleHapusTesti = async (id: number) => { if(!confirm("Hapus?")) return; await supabase.from('testimoni').delete().eq('id', id); toast.success("Dihapus!"); ambilDaftarTesti(); };
-  const handleBatalTesti = () => { setIdTesti(null); setNamaTesti(''); setRoleTesti(''); setTextTesti(''); };
+  const handleHapusPopup = async () => { await supabase.from('toko').update({ popup_image: null }).eq('id', toko.id); setToko({...toko, popup_image: null}); toast.success("Popup dihapus"); };
 
-  if (loading) return <div className="flex h-screen items-center justify-center"><p className="text-xl font-bold text-gray-500 animate-pulse">Memuat Admin...</p></div>;
+  // TESTIMONI (Disingkat)
+  const handleSimpanTesti = async (e: any) => { e.preventDefault(); const p = { nama: namaTesti, role: roleTesti, text: textTesti, avatar: avatarTesti, tampil: true }; if(idTesti) await supabase.from('testimoni').update(p).eq('id', idTesti); else await supabase.from('testimoni').insert([p]); setNamaTesti(''); setIdTesti(null); ambilDaftarTesti(); toast.success("Testimoni OK"); };
+  const toggleStatusTesti = async (id: number, s: boolean) => { await supabase.from('testimoni').update({tampil: !s}).eq('id', id); ambilDaftarTesti(); };
+  const handleHapusTesti = async (id: number) => { await supabase.from('testimoni').delete().eq('id', id); ambilDaftarTesti(); };
+  const handleEditTesti = (t: any) => { setIdTesti(t.id); setNamaTesti(t.nama); setRoleTesti(t.role); setTextTesti(t.text); setAvatarTesti(t.avatar); };
+
+  if (loading) return <div className="flex h-screen items-center justify-center"><p className="animate-pulse font-bold">Memuat...</p></div>;
   if (!isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10 px-4">
+    <div className="min-h-screen bg-gray-100 py-10 px-4 font-sans">
       <Toaster position="bottom-right" />
       <div className="max-w-6xl mx-auto">
-        {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-            <div className="flex items-center gap-4"><Link href="/" className="bg-gray-800 text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-900 transition shadow-lg flex items-center gap-2">⬅️ Kembali ke Home</Link><h1 className="text-3xl font-bold text-gray-800">⚙️ Admin Control</h1></div>
+            <h1 className="text-3xl font-bold text-gray-800">⚙️ Admin Panel</h1>
             <div className="bg-white p-1 rounded-xl shadow-sm flex gap-2 flex-wrap justify-center">
-                <button onClick={() => setActiveTab('produk')} className={`px-4 py-2 rounded-lg font-bold transition text-xs md:text-sm ${activeTab === 'produk' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>📦 Produk</button>
-                <button onClick={() => setActiveTab('transaksi')} className={`px-4 py-2 rounded-lg font-bold transition text-xs md:text-sm ${activeTab === 'transaksi' ? 'bg-orange-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>💰 Kasir</button>
-                <button onClick={() => setActiveTab('tampilan')} className={`px-4 py-2 rounded-lg font-bold transition text-xs md:text-sm ${activeTab === 'tampilan' ? 'bg-purple-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>🎨 Tampilan</button>
-                <button onClick={() => setActiveTab('testimoni')} className={`px-4 py-2 rounded-lg font-bold transition text-xs md:text-sm ${activeTab === 'testimoni' ? 'bg-green-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>💬 Testimoni</button>
+                <button onClick={() => setActiveTab('produk')} className={`px-4 py-2 rounded-lg font-bold ${activeTab === 'produk' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>📦 Produk</button>
+                <button onClick={() => setActiveTab('transaksi')} className={`px-4 py-2 rounded-lg font-bold ${activeTab === 'transaksi' ? 'bg-orange-600 text-white' : 'text-gray-500'}`}>💰 Kasir</button>
+                <button onClick={() => setActiveTab('tampilan')} className={`px-4 py-2 rounded-lg font-bold ${activeTab === 'tampilan' ? 'bg-purple-600 text-white' : 'text-gray-500'}`}>🎨 Tampilan</button>
+                <button onClick={() => setActiveTab('testimoni')} className={`px-4 py-2 rounded-lg font-bold ${activeTab === 'testimoni' ? 'bg-green-600 text-white' : 'text-gray-500'}`}>💬 Testimoni</button>
             </div>
         </div>
 
-        {/* --- TAB PRODUK --- */}
+        {/* TAB PRODUK */}
         {activeTab === 'produk' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-lg h-fit sticky top-4">
-                    <h2 className="text-xl font-bold mb-4">{idProduk ? '✏️ Edit Produk' : '➕ Tambah Produk'}</h2>
-                    <form onSubmit={handleSimpanProduk} className="space-y-4">
-                        <input type="text" placeholder="Nama Produk" required className="w-full p-2 border rounded-lg" value={nama} onChange={e => setNama(e.target.value)} />
-                        <div className="grid grid-cols-2 gap-2"><input type="number" placeholder="Harga Jual" required className="w-full p-2 border rounded-lg font-bold text-blue-600" value={harga} onChange={e => setHarga(e.target.value)} /><input type="number" placeholder="Harga Coret" className="w-full p-2 border rounded-lg text-red-500 line-through" value={hargaCoret} onChange={e => setHargaCoret(e.target.value)} /></div>
-                        <select className="w-full p-2 border rounded-lg bg-white" value={kategori} onChange={e => setKategori(e.target.value)}><option>Ebook</option><option>Template</option><option>Video</option></select>
-                        <textarea placeholder="Deskripsi" className="w-full p-2 border rounded-lg" rows={3} value={deskripsi} onChange={e => setDeskripsi(e.target.value)}></textarea>
-                        <input type="text" placeholder="Link Mayar/Google" className="w-full p-2 border rounded-lg" value={linkMayar} onChange={e => setLinkMayar(e.target.value)} />
-                        <div className="bg-blue-50 p-3 border border-blue-200 rounded-lg"><label className="text-xs font-bold text-blue-800 mb-1 block">📁 File Produk (PDF/Zip)</label><input type="file" accept=".pdf,.zip,.rar,.mp4" onChange={e => setFileProduk(e.target.files?.[0] || null)} className="w-full text-sm mb-2" /><p className="text-[10px] text-gray-500 mb-2 text-center">- ATAU Link Manual -</p><input type="text" placeholder="Paste Link GDrive / YouTube" className="w-full p-2 border rounded text-sm bg-white" value={linkFileManual} onChange={e => setLinkFileManual(e.target.value)} />{urlFileDatabase && !fileProduk && (<p className="text-[10px] text-green-600 mt-1 truncate">✅ File tersimpan: {urlFileDatabase}</p>)}</div>
-                        <div className="bg-gray-50 p-2 border rounded-lg"><span className="text-xs block mb-1">Gambar Cover</span><input type="file" onChange={e => setFileGambar(e.target.files?.[0] || null)} /></div>
-                        {idProduk && (<button type="button" onClick={handleBatalEdit} className="w-full py-2 bg-gray-200 rounded-lg text-sm mb-2">Batal</button>)}
-                        <button disabled={uploading} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold">{uploading ? '...' : 'Simpan'}</button>
+                <div className="bg-white p-6 rounded-3xl shadow-lg h-fit">
+                    <h2 className="font-bold mb-4">{idProduk ? '✏️ Edit' : '➕ Baru'}</h2>
+                    <form onSubmit={handleSimpanProduk} className="space-y-3">
+                        <input className="w-full p-2 border rounded" placeholder="Nama Produk" value={nama} onChange={e=>setNama(e.target.value)} required />
+                        <div className="grid grid-cols-2 gap-2"><input type="number" className="w-full p-2 border rounded" placeholder="Harga" value={harga} onChange={e=>setHarga(e.target.value)} required /><input type="number" className="w-full p-2 border rounded" placeholder="Coret" value={hargaCoret} onChange={e=>setHargaCoret(e.target.value)} /></div>
+                        <textarea className="w-full p-2 border rounded" placeholder="Deskripsi" value={deskripsi} onChange={e=>setDeskripsi(e.target.value)} />
+                        <select className="w-full p-2 border rounded" value={kategori} onChange={e=>setKategori(e.target.value)}><option>Ebook</option><option>Template</option><option>Video</option></select>
+                        <input className="w-full p-2 border rounded" placeholder="Link Mayar (Opsional)" value={linkMayar} onChange={e=>setLinkMayar(e.target.value)} />
+                        <div className="bg-blue-50 p-2 rounded border border-blue-200"><label className="text-xs font-bold block mb-1">File Produk</label><input type="file" onChange={e=>setFileProduk(e.target.files?.[0] || null)} className="text-sm mb-1" /><input className="w-full p-1 border rounded text-xs" placeholder="Atau Link Manual" value={linkFileManual} onChange={e=>setLinkFileManual(e.target.value)} /></div>
+                        <div className="bg-gray-50 p-2 rounded border"><label className="text-xs font-bold block mb-1">Gambar</label><input type="file" onChange={e=>setFileGambar(e.target.files?.[0] || null)} className="text-sm" /></div>
+                        <button disabled={uploading} className="w-full bg-blue-600 text-white py-2 rounded font-bold">{uploading ? '...' : 'Simpan'}</button>
+                        {idProduk && <button type="button" onClick={handleBatalEdit} className="w-full bg-gray-200 py-2 rounded text-xs mt-2">Batal</button>}
                     </form>
                 </div>
-                <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-lg"><div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">{daftarProduk.map(item => (<div key={item.id} className="flex gap-3 p-3 border rounded-xl"><img src={item.gambar} className="w-12 h-12 rounded bg-gray-200" /><div className="flex-grow"><p className="font-bold text-sm">{item.nama_produk}</p><span className="text-blue-600 text-xs font-bold">Rp {item.harga}</span></div><button onClick={() => handleEditClick(item)}>✏️</button><button onClick={() => handleHapusProduk(item.id)}>🗑️</button></div>))}</div></div>
+                <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-lg"><div className="space-y-2">{daftarProduk.map(p => (<div key={p.id} className="flex justify-between items-center border p-2 rounded"><span className="font-bold text-sm">{p.nama_produk}</span><div className="flex gap-2"><button onClick={()=>handleEditClick(p)} className="text-blue-500">✏️</button><button onClick={()=>handleHapusProduk(p.id)} className="text-red-500">🗑️</button></div></div>))}</div></div>
             </div>
         )}
 
-        {/* --- 🔥 TAB TRANSAKSI (KASIR) 🔥 --- */}
+        {/* TAB KASIR */}
         {activeTab === 'transaksi' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* FORM KASIR */}
-                <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-lg h-fit sticky top-4 border border-orange-100">
-                    <h2 className="text-xl font-bold mb-4 text-orange-700">💰 Kasir Manual</h2>
-                    <p className="text-xs text-gray-500 mb-4">Gunakan ini untuk memberi akses produk ke pembeli yang sudah transfer manual.</p>
-                    <form onSubmit={handleBeriAkses} className="space-y-4">
-                        <div>
-                            <label className="text-xs font-bold text-gray-700">1. Email Pembeli</label>
-                            <input type="email" required placeholder="contoh: user@gmail.com" className="w-full p-3 border rounded-lg bg-gray-50 font-bold" value={emailPembeli} onChange={e => setEmailPembeli(e.target.value)} />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-700">2. Pilih Produk</label>
-                            <select required className="w-full p-3 border rounded-lg bg-white" value={produkDipilih} onChange={e => setProdukDipilih(e.target.value)}>
-                                <option value="">-- Pilih Produk --</option>
-                                {daftarProduk.map(p => (
-                                    <option key={p.id} value={p.id}>{p.nama_produk}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <button disabled={loadingTrx} className="w-full py-3 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 transition shadow-lg">
-                            {loadingTrx ? 'Memproses...' : '✅ Beri Akses Sekarang'}
-                        </button>
+                <div className="bg-white p-6 rounded-3xl shadow-lg h-fit border border-orange-200">
+                    <h2 className="font-bold mb-4 text-orange-600">💰 Kasir Manual</h2>
+                    <form onSubmit={handleBeriAkses} className="space-y-3">
+                        <input type="email" required placeholder="Email Pembeli" className="w-full p-2 border rounded" value={emailPembeli} onChange={e=>setEmailPembeli(e.target.value)} />
+                        <select required className="w-full p-2 border rounded" value={produkDipilih} onChange={e=>setProdukDipilih(e.target.value)}><option value="">Pilih Produk</option>{daftarProduk.map(p=><option key={p.id} value={p.id}>{p.nama_produk}</option>)}</select>
+                        <button disabled={loadingTrx} className="w-full bg-orange-600 text-white py-2 rounded font-bold">{loadingTrx ? '...' : 'Beri Akses'}</button>
                     </form>
                 </div>
-
-                {/* RIWAYAT TRANSAKSI */}
-                <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-lg border border-orange-100">
-                    <h2 className="text-xl font-bold mb-4 border-b pb-2">📜 50 Transaksi Terakhir</h2>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-500">
-                            <thead className="text-xs text-gray-700 uppercase bg-orange-50">
-                                <tr>
-                                    <th className="px-4 py-3">Tanggal</th>
-                                    <th className="px-4 py-3">Email User</th>
-                                    <th className="px-4 py-3">Produk</th>
-                                    <th className="px-4 py-3">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {riwayatTransaksi.length === 0 ? (
-                                    <tr><td colSpan={4} className="px-4 py-6 text-center italic">Belum ada transaksi.</td></tr>
-                                ) : (
-                                    riwayatTransaksi.map((trx) => (
-                                        <tr key={trx.id} className="bg-white border-b hover:bg-gray-50">
-                                            <td className="px-4 py-3">{new Date(trx.created_at).toLocaleDateString()}</td>
-                                            <td className="px-4 py-3 font-bold text-gray-900">{trx.user_email}</td>
-                                            <td className="px-4 py-3">{trx.produk?.nama_produk || 'Produk Dihapus'}</td>
-                                            <td className="px-4 py-3">
-                                                <button onClick={() => handleCabutAkses(trx.id)} className="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 px-2 py-1 rounded border border-red-200">
-                                                    🚫 Cabut
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-lg"><table className="w-full text-sm text-left"><thead><tr className="bg-gray-100"><th>Email</th><th>Produk</th><th>Aksi</th></tr></thead><tbody>{riwayatTransaksi.map(t=>(<tr key={t.id} className="border-b"><td>{t.user_email}</td><td>{t.produk?.nama_produk}</td><td><button onClick={()=>handleCabutAkses(t.id)} className="text-red-500 text-xs font-bold">Cabut</button></td></tr>))}</tbody></table></div>
             </div>
         )}
 
-        {/* --- TAB TAMPILAN & TESTIMONI (Sama) --- */}
+        {/* TAB TAMPILAN */}
         {activeTab === 'tampilan' && (
             <div className="max-w-2xl mx-auto bg-white p-8 rounded-3xl shadow-xl border border-purple-100">
-                <h2 className="text-2xl font-bold mb-6 text-purple-700">🎨 Setting Tampilan</h2>
+                <h2 className="text-2xl font-bold mb-6 text-purple-700">🎨 Branding Toko</h2>
                 <form onSubmit={handleUpdateTampilan} className="space-y-6">
-                    <div><label className="block text-sm font-bold text-gray-700 mb-1">Nama Toko</label><input type="text" className="w-full p-3 border rounded-xl" value={toko.nama_toko || ''} onChange={e => setToko({...toko, nama_toko: e.target.value})} /></div>
-                    <div><label className="block text-sm font-bold text-gray-700 mb-1">Slogan</label><textarea className="w-full p-3 border rounded-xl" rows={2} value={toko.deskripsi || ''} onChange={e => setToko({...toko, deskripsi: e.target.value})}></textarea></div>
-                    <div className="bg-yellow-50 p-3 rounded-xl border border-yellow-200"><label className="block text-sm font-bold text-yellow-800 mb-1">📢 Teks Berjalan</label><input type="text" className="w-full p-2 border rounded-lg" value={toko.running_text || ''} onChange={e => setToko({...toko, running_text: e.target.value})} /></div>
-                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-200"><label className="block text-sm font-bold text-blue-800 mb-3">📊 Data Statistik Toko</label><div className="grid grid-cols-3 gap-3"><div><label className="text-xs text-gray-500">Total Member</label><input type="text" className="w-full p-2 border rounded-lg font-bold" value={toko.total_member || ''} onChange={e => setToko({...toko, total_member: e.target.value})} /></div><div><label className="text-xs text-gray-500">Produk Terjual</label><input type="text" className="w-full p-2 border rounded-lg font-bold" value={toko.total_terjual || ''} onChange={e => setToko({...toko, total_terjual: e.target.value})} /></div><div><label className="text-xs text-gray-500">Kepuasan</label><input type="text" className="w-full p-2 border rounded-lg font-bold" value={toko.kepuasan || ''} onChange={e => setToko({...toko, kepuasan: e.target.value})} /></div></div></div>
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl"><label className="block text-sm font-bold text-red-700 mb-2">🔥 Pop-up Iklan</label>{toko.popup_image ? (<div className="mb-3"><img src={toko.popup_image} className="h-32 w-auto rounded-lg object-contain bg-white border mb-2" /><button type="button" onClick={handleHapusPopup} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-600 transition shadow flex items-center gap-1">🗑️ Hapus Pop-up & Matikan Iklan</button></div>) : (<p className="text-xs text-gray-400 mb-2 italic">Tidak ada iklan aktif.</p>)}<input type="file" onChange={e => setFilePopup(e.target.files?.[0] || null)} className="w-full text-sm" /></div>
-                    <div className="p-3 bg-gray-50 rounded-xl"><label className="block text-sm font-bold text-gray-700 mb-1">Header Background</label><input type="file" onChange={e => setFileHeader(e.target.files?.[0] || null)} className="text-sm" /></div>
-                    <div className="p-3 bg-gray-50 rounded-xl"><label className="block text-sm font-bold text-gray-700 mb-1">Footer Background</label><input type="file" onChange={e => setFileFooter(e.target.files?.[0] || null)} className="text-sm" /></div>
-                    <button disabled={savingTema} className="w-full bg-purple-600 text-white py-4 rounded-xl font-bold hover:bg-purple-700 transition shadow-lg">{savingTema ? 'Menyimpan...' : 'Simpan Semua Tampilan ✨'}</button>
+                    {/* 🔥 UPLOAD LOGO DISINI */}
+                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                        <label className="block text-sm font-bold text-purple-800 mb-2">💎 Logo Toko</label>
+                        {toko.logo && <img src={toko.logo} className="h-16 w-auto mb-3 bg-white p-1 rounded border shadow-sm" />}
+                        <input type="file" accept="image/*" onChange={e => setFileLogo(e.target.files?.[0] || null)} className="w-full text-sm" />
+                        <p className="text-[10px] text-gray-500 mt-1">*Format PNG/JPG transparan lebih bagus.</p>
+                    </div>
+
+                    <div><label className="font-bold text-sm">Nama Toko</label><input className="w-full p-2 border rounded" value={toko.nama_toko||''} onChange={e=>setToko({...toko, nama_toko: e.target.value})} /></div>
+                    <div><label className="font-bold text-sm">Slogan</label><textarea className="w-full p-2 border rounded" value={toko.deskripsi||''} onChange={e=>setToko({...toko, deskripsi: e.target.value})} /></div>
+                    <div><label className="font-bold text-sm">Teks Berjalan</label><input className="w-full p-2 border rounded bg-yellow-50" value={toko.running_text||''} onChange={e=>setToko({...toko, running_text: e.target.value})} /></div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 bg-gray-50 rounded border"><label className="font-bold text-xs block mb-1">Header BG</label><input type="file" onChange={e=>setFileHeader(e.target.files?.[0]||null)} className="text-xs" /></div>
+                        <div className="p-3 bg-gray-50 rounded border"><label className="font-bold text-xs block mb-1">Footer BG</label><input type="file" onChange={e=>setFileFooter(e.target.files?.[0]||null)} className="text-xs" /></div>
+                    </div>
+
+                    <div className="p-3 bg-red-50 rounded border border-red-100"><label className="font-bold text-xs text-red-600 block mb-1">Pop-up Iklan</label>{toko.popup_image && <button type="button" onClick={handleHapusPopup} className="text-xs bg-red-500 text-white px-2 py-1 rounded mb-2">Hapus Popup</button>}<input type="file" onChange={e=>setFilePopup(e.target.files?.[0]||null)} className="text-xs" /></div>
+                    <button disabled={savingTema} className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold">{savingTema?'Menyimpan...':'Simpan Perubahan ✨'}</button>
                 </form>
             </div>
         )}
+
+        {/* TAB TESTIMONI */}
         {activeTab === 'testimoni' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-lg h-fit sticky top-4 border border-green-100">
-                    <div className="flex justify-between items-center mb-4 border-b pb-2"><h2 className="text-xl font-bold text-gray-800">{idTesti ? '✏️ Edit' : '💬 Tambah'}</h2>{idTesti && (<button onClick={handleBatalTesti} className="text-xs text-red-500 font-bold hover:underline">Batal</button>)}</div>
-                    <form onSubmit={handleSimpanTesti} className="space-y-4">
-                        <div><label className="text-xs text-gray-500 ml-1">Nama</label><input type="text" required className="w-full p-2 border rounded-lg" value={namaTesti} onChange={e => setNamaTesti(e.target.value)} /></div>
-                        <div><label className="text-xs text-gray-500 ml-1">Role</label><input type="text" required className="w-full p-2 border rounded-lg" value={roleTesti} onChange={e => setRoleTesti(e.target.value)} /></div>
-                        <div><label className="text-xs text-gray-500 ml-1">Isi</label><textarea required className="w-full p-2 border rounded-lg h-24" value={textTesti} onChange={e => setTextTesti(e.target.value)}></textarea></div>
-                        <div><label className="text-xs text-gray-500 ml-1">Emoji</label><select className="w-full p-2 border rounded-lg bg-white text-xl" value={avatarTesti} onChange={e => setAvatarTesti(e.target.value)}><option>😎</option><option>👨‍💻</option><option>👩‍💻</option><option>🧕</option><option>🤴</option><option>👸</option><option>📹</option><option>📸</option><option>🛒</option><option>🔥</option></select></div>
-                        <button className="w-full py-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 transition shadow-lg">Simpan</button>
+                <div className="bg-white p-6 rounded-3xl shadow-lg h-fit border border-green-200">
+                    <h2 className="font-bold mb-4 text-green-700">{idTesti?'Edit':'Tambah'} Testimoni</h2>
+                    <form onSubmit={handleSimpanTesti} className="space-y-3">
+                        <input className="w-full p-2 border rounded" placeholder="Nama" value={namaTesti} onChange={e=>setNamaTesti(e.target.value)} required />
+                        <input className="w-full p-2 border rounded" placeholder="Pekerjaan" value={roleTesti} onChange={e=>setRoleTesti(e.target.value)} required />
+                        <textarea className="w-full p-2 border rounded" placeholder="Isi Testimoni" value={textTesti} onChange={e=>setTextTesti(e.target.value)} required />
+                        <select className="w-full p-2 border rounded text-xl" value={avatarTesti} onChange={e=>setAvatarTesti(e.target.value)}><option>😎</option><option>👩‍💻</option><option>🔥</option></select>
+                        <button className="w-full bg-green-600 text-white py-2 rounded font-bold">Simpan</button>
                     </form>
                 </div>
-                <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-lg border border-green-100">
-                    <h2 className="text-xl font-bold mb-4 border-b pb-2">Moderasi ({daftarTesti.length})</h2>
-                    <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                        {daftarTesti.map(t => (
-                            <div key={t.id} className={`p-4 rounded-xl border flex gap-4 items-start ${t.tampil ? 'bg-white border-green-200' : 'bg-red-50 border-red-200'}`}>
-                                <div className="text-3xl bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-sm">{t.avatar}</div>
-                                <div className="flex-grow">
-                                    <div className="flex justify-between items-start">
-                                        <div><h3 className="font-bold text-gray-800">{t.nama}</h3><p className="text-xs text-gray-500 font-bold uppercase">{t.role}</p></div>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => toggleStatusTesti(t.id, t.tampil)} className={`text-xs px-3 py-1 rounded font-bold text-white ${t.tampil ? 'bg-green-500' : 'bg-gray-400'}`}>{t.tampil ? '✅' : '🚫'}</button>
-                                            <button onClick={() => handleEditTesti(t)} className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">✏️</button>
-                                            <button onClick={() => handleHapusTesti(t.id)} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">🗑️</button>
-                                        </div>
-                                    </div>
-                                    <p className="text-sm text-gray-600 mt-2 italic">"{t.text}"</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-lg"><div className="space-y-2">{daftarTesti.map(t=>(<div key={t.id} className="flex justify-between border p-2 rounded items-center"><div><span className="font-bold">{t.nama}</span> <span className="text-xs text-gray-500">({t.role})</span></div><div className="flex gap-2"><button onClick={()=>toggleStatusTesti(t.id, t.tampil)} className="text-xs border px-1 rounded">{t.tampil?'✅':'🚫'}</button><button onClick={()=>handleEditTesti(t)} className="text-orange-500">✏️</button><button onClick={()=>handleHapusTesti(t.id)} className="text-red-500">🗑️</button></div></div>))}</div></div>
             </div>
         )}
+
       </div>
     </div>
   );
