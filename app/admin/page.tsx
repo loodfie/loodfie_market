@@ -97,7 +97,7 @@ export default function AdminPage() {
   const handleBeriAkses = async (e: React.FormEvent) => { e.preventDefault(); setLoadingTrx(true); const toastId = toast.loading("Memproses..."); try { await supabase.from('transaksi').insert([{ user_email: emailPembeli, produk_id: Number(produkDipilih), status: 'LUNAS' }]); toast.success("Akses Diberikan!", { id: toastId }); setEmailPembeli(''); setProdukDipilih(''); ambilRiwayatTransaksi(); } catch (err: any) { toast.error(err.message, { id: toastId }); } finally { setLoadingTrx(false); } };
   const handleCabutAkses = async (id: number) => { if (confirm("Cabut akses?")) { await supabase.from('transaksi').delete().eq('id', id); toast.success("Dicabut"); ambilRiwayatTransaksi(); }};
 
-  // --- 🔥 LOGIKA TAMPILAN (NEW FEATURES) ---
+  // --- 🔥 LOGIKA TAMPILAN ---
   const handleUpdateTampilan = async (e: React.FormEvent) => {
     e.preventDefault(); setSavingTema(true); const toastId = toast.loading("Menyimpan...");
     try {
@@ -106,13 +106,20 @@ export default function AdminPage() {
         if (fileFooter) { const n = `footer-${Date.now()}-${fileFooter.name}`; await supabase.storage.from('gambar-produk').upload(n, fileFooter); urlFooter = supabase.storage.from('gambar-produk').getPublicUrl(n).data.publicUrl; }
         if (filePopup) { const n = `popup-${Date.now()}-${filePopup.name}`; await supabase.storage.from('gambar-produk').upload(n, filePopup); urlPopup = supabase.storage.from('gambar-produk').getPublicUrl(n).data.publicUrl; }
         if (fileLogo) { const n = `logo-${Date.now()}-${fileLogo.name}`; await supabase.storage.from('gambar-produk').upload(n, fileLogo); urlLogo = supabase.storage.from('gambar-produk').getPublicUrl(n).data.publicUrl; }
-        const payload = { nama_toko: toko.nama_toko, deskripsi: toko.deskripsi, font_style: toko.font_style, header_bg: urlHeader, footer_bg: urlFooter, running_text: toko.running_text, popup_image: urlPopup, logo: urlLogo, total_member: toko.total_member, total_terjual: toko.total_terjual, kepuasan: toko.kepuasan };
+        
+        // Payload mencakup statistik
+        const payload = { 
+            nama_toko: toko.nama_toko, deskripsi: toko.deskripsi, font_style: toko.font_style, 
+            header_bg: urlHeader, footer_bg: urlFooter, running_text: toko.running_text, 
+            popup_image: urlPopup, logo: urlLogo, 
+            total_member: toko.total_member, total_terjual: toko.total_terjual, kepuasan: toko.kepuasan 
+        };
+        
         if (!toko.id) { await supabase.from('toko').insert([payload]); } else { await supabase.from('toko').update(payload).eq('id', toko.id); }
         toast.success("Tampilan Update! ✨", { id: toastId }); ambilDataToko(); 
     } catch (err: any) { toast.error("Gagal: " + err.message, { id: toastId }); } finally { setSavingTema(false); }
   };
   
-  // 🔥 FITUR HAPUS LOGO
   const handleHapusLogo = async () => { 
       if (!confirm("Yakin hapus Logo?")) return;
       const toastId = toast.loading("Menghapus Logo...");
@@ -124,7 +131,6 @@ export default function AdminPage() {
       } catch (err: any) { toast.error(err.message, { id: toastId }); }
   };
 
-  // 🔥 FITUR HAPUS POPUP
   const handleHapusPopup = async () => { 
       if (!confirm("Hapus Pop-up Iklan?")) return; 
       const toastId = toast.loading("Menghapus Pop-up..."); 
@@ -153,7 +159,6 @@ export default function AdminPage() {
         {/* HEADER ADMIN */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex items-center gap-4 w-full md:w-auto">
-                {/* 🔥 FITUR BACK KE MENU UTAMA */}
                 <Link href="/" className="bg-gray-800 text-white px-5 py-3 rounded-xl font-bold hover:bg-black transition shadow-lg flex items-center gap-2 text-sm">
                     <FaArrowLeft /> Kembali ke Toko
                 </Link>
@@ -163,7 +168,6 @@ export default function AdminPage() {
                 </div>
             </div>
             
-            {/* NAVIGASI TAB */}
             <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
                 <button onClick={() => setActiveTab('produk')} className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 whitespace-nowrap transition ${activeTab === 'produk' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><FaStore /> Produk</button>
                 <button onClick={() => setActiveTab('transaksi')} className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 whitespace-nowrap transition ${activeTab === 'transaksi' ? 'bg-orange-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><FaMoneyBillWave /> Kasir</button>
@@ -230,7 +234,6 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="bg-white p-6 rounded-3xl shadow-lg h-fit border border-orange-200 sticky top-4">
                     <h2 className="font-bold mb-4 text-xl text-orange-600 flex items-center gap-2"><FaMoneyBillWave /> Kasir Manual</h2>
-                    <p className="text-xs text-gray-500 mb-4">Gunakan ini untuk memberi akses ke pembeli yang transfer manual (WA).</p>
                     <form onSubmit={handleBeriAkses} className="space-y-4">
                         <div><label className="text-xs font-bold text-gray-500">Email Pembeli</label><input type="email" required placeholder="contoh@email.com" className="w-full p-3 border rounded-xl bg-orange-50 font-bold text-gray-800" value={emailPembeli} onChange={e=>setEmailPembeli(e.target.value)} /></div>
                         <div><label className="text-xs font-bold text-gray-500">Pilih Produk</label><select required className="w-full p-3 border rounded-xl bg-white" value={produkDipilih} onChange={e=>setProdukDipilih(e.target.value)}><option value="">-- Pilih Produk --</option>{daftarProduk.map(p=><option key={p.id} value={p.id}>{p.nama_produk}</option>)}</select></div>
@@ -258,24 +261,22 @@ export default function AdminPage() {
             </div>
         )}
 
-        {/* --- TAB 3: TAMPILAN (FITUR HAPUS ADA DISINI) --- */}
+        {/* --- TAB 3: TAMPILAN --- */}
         {activeTab === 'tampilan' && (
             <div className="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-xl border border-purple-100">
                 <h2 className="text-2xl font-bold mb-6 text-purple-700 flex items-center gap-2"><FaPalette /> Branding & Tampilan</h2>
                 <form onSubmit={handleUpdateTampilan} className="space-y-8">
                     
-                    {/* 🔥 1. SEKSI LOGO (DENGAN TOMBOL HAPUS) */}
+                    {/* 1. SEKSI LOGO */}
                     <div className="p-6 bg-purple-50 border border-purple-200 rounded-2xl">
                         <div className="flex justify-between items-start mb-4">
                             <label className="text-sm font-bold text-purple-800">💎 Logo Toko</label>
-                            {/* Tombol Hapus Logo */}
                             {toko.logo && (
                                 <button type="button" onClick={handleHapusLogo} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-lg font-bold hover:bg-red-200 flex items-center gap-1 transition">
                                     <FaTrash /> Hapus Logo
                                 </button>
                             )}
                         </div>
-                        
                         <div className="flex items-center gap-4 mb-4">
                             {toko.logo ? (
                                 <img src={toko.logo} className="h-20 w-auto bg-white p-2 rounded-lg border shadow-sm object-contain" />
@@ -284,29 +285,46 @@ export default function AdminPage() {
                             )}
                             <div className="flex-grow">
                                 <input type="file" accept="image/*" onChange={e => setFileLogo(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200" />
-                                <p className="text-[10px] text-gray-500 mt-2">Format: PNG Transparan (Disarankan)</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* 2. DATA TEXT */}
+                    {/* 🔥 2. DATA STATISTIK (DIBALIKKAN LAGI) */}
+                    <div className="bg-blue-50 p-6 rounded-2xl border border-blue-200">
+                        <label className="block text-sm font-bold text-blue-800 mb-4">📊 Data Statistik Toko (Palsu/Dummy)</label>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 mb-1 block">Total Member</label>
+                                <input type="text" className="w-full p-3 border rounded-xl font-bold text-gray-800" value={toko.total_member || ''} onChange={e => setToko({...toko, total_member: e.target.value})} placeholder="100+" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 mb-1 block">Produk Terjual</label>
+                                <input type="text" className="w-full p-3 border rounded-xl font-bold text-gray-800" value={toko.total_terjual || ''} onChange={e => setToko({...toko, total_terjual: e.target.value})} placeholder="500+" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 mb-1 block">Kepuasan</label>
+                                <input type="text" className="w-full p-3 border rounded-xl font-bold text-gray-800" value={toko.kepuasan || ''} onChange={e => setToko({...toko, kepuasan: e.target.value})} placeholder="4.9" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 3. TEXT & SLOGAN */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div><label className="font-bold text-sm block mb-1">Nama Toko</label><input className="w-full p-3 border rounded-xl" value={toko.nama_toko||''} onChange={e=>setToko({...toko, nama_toko: e.target.value})} /></div>
                         <div><label className="font-bold text-sm block mb-1">Running Text (Kuning)</label><input className="w-full p-3 border rounded-xl" value={toko.running_text||''} onChange={e=>setToko({...toko, running_text: e.target.value})} /></div>
                     </div>
                     <div><label className="font-bold text-sm block mb-1">Slogan / Deskripsi</label><textarea className="w-full p-3 border rounded-xl" rows={2} value={toko.deskripsi||''} onChange={e=>setToko({...toko, deskripsi: e.target.value})} /></div>
 
-                    {/* 3. GAMBAR BACKGROUND */}
+                    {/* 4. BACKGROUND */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="p-4 bg-gray-50 rounded-xl border"><label className="font-bold text-xs block mb-2">Header Background</label><input type="file" onChange={e=>setFileHeader(e.target.files?.[0]||null)} className="text-xs w-full" /></div>
                         <div className="p-4 bg-gray-50 rounded-xl border"><label className="font-bold text-xs block mb-2">Footer Background</label><input type="file" onChange={e=>setFileFooter(e.target.files?.[0]||null)} className="text-xs w-full" /></div>
                     </div>
 
-                    {/* 🔥 4. POPUP IKLAN (DENGAN TOMBOL HAPUS) */}
+                    {/* 5. POPUP IKLAN */}
                     <div className="p-6 bg-red-50 border border-red-100 rounded-2xl">
                          <div className="flex justify-between items-start mb-4">
                             <label className="text-sm font-bold text-red-700">🔥 Pop-up Iklan</label>
-                            {/* Tombol Hapus Popup */}
                             {toko.popup_image && (
                                 <button type="button" onClick={handleHapusPopup} className="text-xs bg-red-600 text-white px-3 py-1 rounded-lg font-bold hover:bg-red-700 flex items-center gap-1 transition shadow">
                                     <FaTrash /> Hapus Popup
