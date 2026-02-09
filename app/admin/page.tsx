@@ -97,7 +97,7 @@ export default function AdminPage() {
   const handleBeriAkses = async (e: React.FormEvent) => { e.preventDefault(); setLoadingTrx(true); const toastId = toast.loading("Memproses..."); try { await supabase.from('transaksi').insert([{ user_email: emailPembeli, produk_id: Number(produkDipilih), status: 'LUNAS' }]); toast.success("Akses Diberikan!", { id: toastId }); setEmailPembeli(''); setProdukDipilih(''); ambilRiwayatTransaksi(); } catch (err: any) { toast.error(err.message, { id: toastId }); } finally { setLoadingTrx(false); } };
   const handleCabutAkses = async (id: number) => { if (confirm("Cabut akses?")) { await supabase.from('transaksi').delete().eq('id', id); toast.success("Dicabut"); ambilRiwayatTransaksi(); }};
 
-  // --- 🔥 LOGIKA TAMPILAN ---
+  // --- 🔥 LOGIKA TAMPILAN (DIPERBARUI DENGAN PESAN LOGIN) ---
   const handleUpdateTampilan = async (e: React.FormEvent) => {
     e.preventDefault(); setSavingTema(true); const toastId = toast.loading("Menyimpan...");
     try {
@@ -107,12 +107,12 @@ export default function AdminPage() {
         if (filePopup) { const n = `popup-${Date.now()}-${filePopup.name}`; await supabase.storage.from('gambar-produk').upload(n, filePopup); urlPopup = supabase.storage.from('gambar-produk').getPublicUrl(n).data.publicUrl; }
         if (fileLogo) { const n = `logo-${Date.now()}-${fileLogo.name}`; await supabase.storage.from('gambar-produk').upload(n, fileLogo); urlLogo = supabase.storage.from('gambar-produk').getPublicUrl(n).data.publicUrl; }
         
-        // Payload mencakup statistik
         const payload = { 
             nama_toko: toko.nama_toko, deskripsi: toko.deskripsi, font_style: toko.font_style, 
             header_bg: urlHeader, footer_bg: urlFooter, running_text: toko.running_text, 
             popup_image: urlPopup, logo: urlLogo, 
-            total_member: toko.total_member, total_terjual: toko.total_terjual, kepuasan: toko.kepuasan 
+            total_member: toko.total_member, total_terjual: toko.total_terjual, kepuasan: toko.kepuasan,
+            pesan_login: toko.pesan_login // 🔥 Simpan Pesan Login
         };
         
         if (!toko.id) { await supabase.from('toko').insert([payload]); } else { await supabase.from('toko').update(payload).eq('id', toko.id); }
@@ -289,10 +289,10 @@ export default function AdminPage() {
                         </div>
                     </div>
 
-                    {/* 🔥 2. DATA STATISTIK (DIBALIKKAN LAGI) */}
+                    {/* 🔥 2. DATA STATISTIK + PESAN LOGIN BARU */}
                     <div className="bg-blue-50 p-6 rounded-2xl border border-blue-200">
-                        <label className="block text-sm font-bold text-blue-800 mb-4">📊 Data Statistik Toko (Palsu/Dummy)</label>
-                        <div className="grid grid-cols-3 gap-4">
+                        <label className="block text-sm font-bold text-blue-800 mb-4">📊 Data & Pesan Sistem</label>
+                        <div className="grid grid-cols-3 gap-4 mb-4">
                             <div>
                                 <label className="text-xs font-bold text-gray-500 mb-1 block">Total Member</label>
                                 <input type="text" className="w-full p-3 border rounded-xl font-bold text-gray-800" value={toko.total_member || ''} onChange={e => setToko({...toko, total_member: e.target.value})} placeholder="100+" />
@@ -305,6 +305,19 @@ export default function AdminPage() {
                                 <label className="text-xs font-bold text-gray-500 mb-1 block">Kepuasan</label>
                                 <input type="text" className="w-full p-3 border rounded-xl font-bold text-gray-800" value={toko.kepuasan || ''} onChange={e => setToko({...toko, kepuasan: e.target.value})} placeholder="4.9" />
                             </div>
+                        </div>
+                        
+                        {/* 🔥 INPUT PESAN LOGIN POPUP */}
+                        <div>
+                            <label className="text-xs font-bold text-blue-700 mb-1 block">🔒 Pesan Popup Login (Wajib Login)</label>
+                            <input 
+                                type="text" 
+                                className="w-full p-3 border rounded-xl border-blue-200 bg-white font-medium text-gray-700 focus:ring-2 focus:ring-blue-300 outline-none" 
+                                value={toko.pesan_login || ''} 
+                                onChange={e => setToko({...toko, pesan_login: e.target.value})} 
+                                placeholder="Eits, Member Only! Silakan Login dulu..." 
+                            />
+                            <p className="text-[10px] text-blue-400 mt-1">Teks ini akan muncul jika non-member mencoba membeli.</p>
                         </div>
                     </div>
 

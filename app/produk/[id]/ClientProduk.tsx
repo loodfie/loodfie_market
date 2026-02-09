@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import FloatingWA from '../../components/FloatingWA';
 import { FaInstagram, FaFacebookF, FaTiktok, FaShoppingCart } from 'react-icons/fa';
-// 🔥 IMPORT CONTEXT KERANJANG
+import toast, { Toaster } from 'react-hot-toast'; 
 import { useCart } from '@/context/CartContext';
 
 export default function ClientProduk({ idProduk }: { idProduk: string }) {
@@ -16,13 +16,16 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
   const [loading, setLoading] = useState(true);
   const [viewers, setViewers] = useState(0);
   
-  // 🔥 AMBIL FUNGSI KERANJANG
+  // 🔥 STATE USER
+  const [user, setUser] = useState<any>(null);
+
   const { addToCart, items } = useCart();
 
   const [toko, setToko] = useState({ 
     nama_toko: 'Loodfie Market', 
     footer_bg: null,
-    font_style: 'Inter'
+    font_style: 'Inter',
+    pesan_login: '🔒 Eits, Member Only! Silakan Login atau Daftar dulu ya.' // Default jika database kosong
   });
 
   const socialLinks = {
@@ -32,15 +35,18 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
   };
 
   useEffect(() => {
-    // Efek Random Viewers (Biar kelihatan ramai)
     setViewers(Math.floor(Math.random() * (25 - 5 + 1)) + 5);
 
     async function getData() {
-      // 1. Ambil Data Toko
+      // 1. Cek User Session
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user || null);
+
+      // 2. Ambil Data Toko (Termasuk Pesan Login)
       const { data: dataToko } = await supabase.from('toko').select('*').single();
       if (dataToko) setToko(dataToko);
 
-      // 2. Ambil Data Produk
+      // 3. Ambil Data Produk
       const { data: dataProduk, error } = await supabase
         .from('produk')
         .select('*')
@@ -53,7 +59,7 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
       }
       setProduk(dataProduk);
 
-      // 3. Ambil Produk Serupa
+      // 4. Ambil Produk Serupa
       const { data: dataRelated } = await supabase
         .from('produk')
         .select('*')
@@ -68,10 +74,22 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
     getData();
   }, [idProduk]);
 
-  // --- LOGIKA TOMBOL SAKTI ---
+  // 🔥 FUNGSI PENJAGA GERBANG (DINAMIS DARI DATABASE)
+  const cekWajibLogin = () => {
+    if (!user) {
+      // Menggunakan pesan dari database
+      toast.error(toko.pesan_login || "🔒 Silakan login terlebih dahulu.", {
+        icon: '🔐',
+        duration: 4000
+      });
+      router.push('/masuk');
+      return false;
+    }
+    return true; 
+  };
 
-  // 1. Tombol +Keranjang (Untuk Borongan)
   const handleAddToCart = () => {
+    if (!cekWajibLogin()) return;
     if (!produk) return;
     addToCart({
         id: produk.id,
@@ -81,15 +99,13 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
     });
   };
 
-  // 2. Tombol Beli Langsung (Untuk Satuan Cepat)
   const handleBeliLangsung = () => {
-      // Cek apakah produk ini punya Link Mayar?
+      if (!cekWajibLogin()) return;
+
       if (produk.link_mayar && produk.link_mayar.startsWith('http')) {
-        // Kalau ada, langsung buka Mayar (User senang, cepat!)
         window.open(produk.link_mayar, '_blank');
       } else {
-        // Kalau Link Mayar kosong/lupa diisi, arahkan ke WA (Cadangan)
-        const text = `Halo Admin, saya mau beli satuan: ${produk.nama_produk}. Mohon info pembayarannya.`;
+        const text = `Halo Admin, saya (Member: ${user.email}) mau beli satuan: ${produk.nama_produk}. Mohon info pembayarannya.`;
         window.open(`https://wa.me/6285314445959?text=${encodeURIComponent(text)}`, '_blank');
       }
   };
@@ -117,6 +133,7 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans" style={{ fontFamily: `"${toko.font_style}", sans-serif` }}>
+      <Toaster position="top-center" />
       <FloatingWA />
       <style jsx global>{` @import url('${fontMap[toko.font_style] || fontMap['Inter']}'); `}</style>
 
@@ -126,7 +143,6 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
             <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition font-bold text-sm">⬅️ Kembali</Link>
             <span className="font-bold text-lg tracking-tight">{toko.nama_toko}</span>
             
-            {/* 🔥 IKON KERANJANG DI NAVBAR */}
             <Link href="/keranjang" className="relative p-2 group">
                 <FaShoppingCart className="text-xl text-gray-700 group-hover:text-blue-600 transition" />
                 {items.length > 0 && (
@@ -166,9 +182,8 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
                         {produk.deskripsi || "Tidak ada deskripsi untuk produk ini."}
                     </div>
                     
-                    {/* 🔥 DUA TOMBOL SAKTI: CART vs DIRECT MAYAR */}
+                    {/* 🔥 DUA TOMBOL SAKTI */}
                     <div className="mt-auto grid grid-cols-2 gap-3">
-                        {/* 1. TOMBOL KERANJANG (ORANGE) */}
                         <button 
                             onClick={handleAddToCart} 
                             className="w-full bg-orange-50 text-orange-600 border border-orange-200 py-4 rounded-xl font-bold text-sm md:text-lg shadow-sm hover:bg-orange-100 transition flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 active:scale-95"
@@ -176,7 +191,6 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
                             <FaShoppingCart /> <span>+Keranjang</span>
                         </button>
 
-                        {/* 2. TOMBOL BELI LANGSUNG (BIRU) */}
                         <button 
                             onClick={handleBeliLangsung} 
                             className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-sm md:text-lg shadow-xl hover:bg-blue-700 hover:shadow-blue-500/30 transition transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
@@ -184,6 +198,7 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
                              ⚡ Beli Sekarang
                         </button>
                     </div>
+                    <p className="text-[10px] text-gray-400 text-center mt-3">*Anda wajib login untuk melakukan pembelian</p>
 
                 </div>
             </div>
