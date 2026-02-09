@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 type CartItem = {
   id: number;
   nama_produk: string;
-  harga: number;
+  harga: number; // Pastikan ini number
   gambar: string;
 };
 
@@ -28,7 +28,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const savedCart = localStorage.getItem('keranjang_loodfie');
     if (savedCart) {
       try {
-        setItems(JSON.parse(savedCart));
+        const parsedCart = JSON.parse(savedCart);
+        // 🔥 FIX PENTING: Paksa konversi harga jadi Number saat load
+        const fixedCart = parsedCart.map((item: any) => ({
+          ...item,
+          harga: Number(item.harga) 
+        }));
+        setItems(fixedCart);
       } catch (e) {
         console.error("Gagal load keranjang", e);
       }
@@ -41,12 +47,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items]);
 
   const addToCart = (newItem: CartItem) => {
+    // Cek apakah barang sudah ada?
     const isExist = items.find(item => item.id === newItem.id);
     if (isExist) {
       toast.error("Barang ini sudah ada di keranjang!");
       return;
     }
-    setItems([...items, newItem]);
+    
+    // 🔥 FIX PENTING: Pastikan harga yang masuk adalah Number
+    const itemToSave = { ...newItem, harga: Number(newItem.harga) };
+    
+    setItems([...items, itemToSave]);
     toast.success("🛒 Masuk Keranjang!");
   };
 
@@ -57,7 +68,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = () => setItems([]);
 
-  const totalHarga = items.reduce((acc, item) => acc + item.harga, 0);
+  // 🔥 RUMUS MATEMATIKA YANG BENAR
+  // acc + Number(item.harga) -> Menjamin penjumlahan angka, bukan penggabungan teks
+  const totalHarga = items.reduce((acc, item) => acc + Number(item.harga), 0);
 
   return (
     <CartContext.Provider value={{ items, addToCart, removeFromCart, clearCart, totalHarga }}>
