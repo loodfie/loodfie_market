@@ -4,105 +4,141 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [listProduk, setListProduk] = useState<any[]>([]);
-  
-  // 🔥 STATE DETEKTIF (Untuk menampilkan error di layar)
-  const [debugLog, setDebugLog] = useState<string>('Memulai investigasi...');
-  
   const router = useRouter();
 
   useEffect(() => {
     async function initDashboard() {
+      // 1. Cek Login
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/masuk');
         return;
       }
       setUser(session.user);
-      
-      let logs = `1. User Login: ${session.user.email}\n`;
 
-      // LANGKAH 1: Cek Transaksi
+      // 2. Ambil Transaksi (Tanpa filter status dulu biar data masuk semua)
       const { data: dataTransaksi, error: errTrx } = await supabase
         .from('transaksi')
-        .select('*') // Ambil semua kolom biar kelihatan
-        .eq('user_email', session.user.email); // Hapus dulu filter LUNAS biar ketahuan ada data apa ngga
+        .select('produk_id, status')
+        .eq('user_email', session.user.email);
 
-      if (errTrx) {
-        logs += `❌ Error Ambil Transaksi: ${errTrx.message}\nDetail: ${JSON.stringify(errTrx)}\n`;
-        setDebugLog(logs);
-        setLoading(false);
-        return;
-      }
-
-      logs += `2. Data Transaksi Ditemukan: ${dataTransaksi?.length} baris\n`;
-      logs += `   Isi Transaksi: ${JSON.stringify(dataTransaksi)}\n`;
-
-      if (!dataTransaksi || dataTransaksi.length === 0) {
-        logs += `⚠️ HASIL: Tidak ada transaksi untuk email ini. Cek apakah email di database persis sama?\n`;
-        setDebugLog(logs);
+      if (errTrx || !dataTransaksi || dataTransaksi.length === 0) {
         setListProduk([]);
         setLoading(false);
         return;
       }
 
-      // Ambil ID Produk
-      const daftarId = dataTransaksi.map(item => item.produk_id);
-      logs += `3. ID Produk yang dicari: [${daftarId.join(', ')}]\n`;
+      // 🔥 FILTER PINTAR: Terima 'LUNAS', 'lunas', atau 'Lunas'
+      // Kita ambil ID produk yang statusnya mengandung kata "lunas"
+      const transaksiSah = dataTransaksi.filter(t => 
+        t.status && t.status.toLowerCase() === 'lunas'
+      );
 
-      // LANGKAH 2: Ambil Produk
-      const { data: dataProduk, error: errProd } = await supabase
+      if (transaksiSah.length === 0) {
+        setListProduk([]);
+        setLoading(false);
+        return;
+      }
+
+      const daftarId = transaksiSah.map(item => item.produk_id);
+
+      // 3. Ambil Detail Produk
+      const { data: dataProduk } = await supabase
         .from('produk')
         .select('*')
         .in('id', daftarId);
 
-      if (errProd) {
-        logs += `❌ Error Ambil Produk: ${errProd.message}\n`;
-      } else {
-        logs += `4. Produk Ditemukan: ${dataProduk?.length} item\n`;
-        setListProduk(dataProduk || []);
-      }
-
-      setDebugLog(logs); // Tampilkan semua catatan detektif ke layar
+      setListProduk(dataProduk || []);
       setLoading(false);
     }
 
     initDashboard();
   }, [router]);
 
-  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/'); };
-  const handleDownload = (link: string) => { if (link) window.open(link, '_blank'); };
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><p className="animate-pulse font-bold">Sedang Menginvestigasi...</p></div>;
+  const handleDownload = (link: string) => {
+    if (!link) {
+      toast.error("Link file belum tersedia. Hubungi Admin.");
+      return;
+    }
+    window.open(link, '_blank');
+    toast.success("Membuka file... 🚀");
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><p className="animate-pulse font-bold text-gray-500">Memuat Member Area...</p></div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 font-sans p-6">
-      <nav className="flex justify-between items-center mb-8">
-        <h1 className="font-bold text-xl">🕵️‍♂️ Mode Debug Dashboard</h1>
-        <button onClick={handleLogout} className="text-red-600 font-bold">Keluar</button>
+    <div className="min-h-screen bg-gray-50 font-sans">
+      <Toaster position="bottom-right" />
+      
+      {/* NAVBAR */}
+      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+        <Link href="/" className="font-bold text-xl tracking-tight text-gray-900">Loodfie Market <span className="text-blue-600 text-xs px-2 py-0.5 bg-blue-50 rounded-full border border-blue-100">Member</span></Link>
+        <div className="flex items-center gap-4">
+            <span className="text-xs text-gray-500 hidden md:block">{user?.email}</span>
+            <button onClick={handleLogout} className="text-sm font-bold text-red-600 hover:text-red-800 transition">Keluar</button>
+        </div>
       </nav>
 
-      {/* KOTAK HITAM (LOG LOGIKA) */}
-      <div className="bg-black text-green-400 p-6 rounded-xl font-mono text-xs md:text-sm mb-8 overflow-auto shadow-2xl border-2 border-green-600">
-        <h3 className="text-white font-bold border-b border-gray-700 pb-2 mb-2">💻 SYSTEM LOGS:</h3>
-        <pre className="whitespace-pre-wrap">{debugLog}</pre>
-      </div>
-
-      {/* HASIL PRODUK */}
-      <h2 className="font-bold mb-4">Hasil Produk:</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {listProduk.map((item) => (
-            <div key={item.id} className="bg-white p-4 rounded shadow">
-                <p className="font-bold">{item.nama_produk}</p>
-                <p className="text-xs text-gray-500">ID: {item.id}</p>
-                <button onClick={() => handleDownload(item.file_url)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs mt-2">Download</button>
+      <main className="container mx-auto px-6 py-10 max-w-5xl">
+        {/* HEADER WELCOME */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <h1 className="text-3xl font-extrabold mb-2">Halo, Sultan! 👋</h1>
+                <p className="text-blue-100 text-sm">Ini adalah koleksi aset digital yang sudah kamu miliki.</p>
             </div>
-        ))}
-      </div>
+            <div className="bg-white/10 backdrop-blur border border-white/20 p-4 rounded-2xl text-center min-w-[150px]">
+                <span className="block text-3xl font-bold">{listProduk.length}</span>
+                <span className="text-xs text-blue-100 uppercase tracking-wider font-bold">Produk Dimiliki</span>
+            </div>
+        </div>
+
+        <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">📂 Aset Saya</h2>
+        
+        {/* LOGIKA TAMPILAN */}
+        {listProduk.length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
+                <span className="text-6xl mb-4 block">🛒</span>
+                <h3 className="text-lg font-bold text-gray-700 mb-2">Belum ada produk</h3>
+                <p className="text-gray-400 text-sm mb-6">Kamu belum membeli produk apapun.</p>
+                <Link href="/" className="bg-blue-600 text-white px-6 py-3 rounded-full font-bold shadow hover:bg-blue-700 transition">Jelajahi Toko</Link>
+            </div>
+        ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {listProduk.map((item) => (
+                    <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition group flex flex-col h-full">
+                        <div className="h-40 bg-gray-100 relative overflow-hidden flex items-center justify-center">
+                            <img src={item.gambar || 'https://via.placeholder.com/300'} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                            <div className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow">LUNAS ✅</div>
+                        </div>
+                        <div className="p-5 flex flex-col flex-grow">
+                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wide mb-1 block">{item.kategori || 'Digital Product'}</span>
+                            <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{item.nama_produk}</h3>
+                            <div className="mt-auto pt-4">
+                                <button 
+                                    onClick={() => handleDownload(item.file_url)}
+                                    className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-600 transition shadow-lg"
+                                >
+                                    ⬇️ Download File
+                                </button>
+                                <p className="text-[10px] text-gray-400 text-center mt-3">Akses selamanya • Garansi Update</p>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )}
+      </main>
     </div>
   );
 }
