@@ -4,22 +4,29 @@ import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// 👇 INI BAGIAN PENTINGNYA (METADATA)
+// 🔥 UPDATE SEO GLOBAL DI SINI
 export const metadata: Metadata = {
-  title: "Loodfie Market | Pusat Produk Digital Terlengkap",
-  description: "Platform No. 1 beli Ebook, Template, Source Code, dan Video Course berkualitas. Harga terjangkau, garansi akses selamanya!",
-  icons: {
-    icon: '/favicon.ico', 
-  },
-  // Settingan biar keren pas dishare di Sosmed (OpenGraph)
+  title: "Loodfie Market - Pusat Produk Digital Terlengkap",
+  description: "Temukan Ebook, Template, dan Source Code berkualitas premium dengan harga terbaik. Garansi akses selamanya!",
+  // Konfigurasi Open Graph (Untuk Tampilan di WhatsApp/FB/Twitter)
   openGraph: {
-    title: "Loodfie Market | Pusat Produk Digital",
-    description: "Temukan ribuan aset digital premium untuk kebutuhanmu. Cek sekarang!",
-    url: 'https://loodfie-market-oy4u.vercel.app', // Link Website Kamu
-    siteName: 'Loodfie Market',
-    locale: 'id_ID',
+    title: "Loodfie Market | Jual Produk Digital Premium",
+    description: "Pusat belanja Ebook, Template & Source Code termurah dan terpercaya.",
+    // Ganti URL ini dengan link gambar logo toko Bos yang sudah diupload ke Supabase
+    // Contoh: 'https://ixk...supabase.co/storage/v1/object/public/gambar-produk/logo-toko.png'
+    // Untuk sementara pakai placeholder dulu kalau belum punya logo
+    images: ['https://placehold.co/600x400/2563eb/FFF?text=Loodfie+Market'], 
     type: 'website',
+    locale: 'id_ID',
+    siteName: 'Loodfie Market',
   },
+  // Konfigurasi Twitter Card (Biar cakep juga di Twitter/X)
+  twitter: {
+    card: 'summary_large_image',
+    title: "Loodfie Market - Pusat Produk Digital",
+    description: "Belanja produk digital aman & terpercaya.",
+    images: ['https://placehold.co/600x400/2563eb/FFF?text=Loodfie+Market'], 
+  }
 };
 
 export default function RootLayout({
