@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { FaWhatsapp, FaShoppingCart, FaStar, FaCheckCircle, FaInstagram, FaFacebookF, FaTiktok } from 'react-icons/fa';
+import { FaWhatsapp, FaShoppingCart, FaStar, FaCheckCircle, FaInstagram, FaFacebookF, FaTiktok, FaCog } from 'react-icons/fa';
 import { useCart } from '@/context/CartContext';
 
 export default function Home() {
@@ -19,20 +19,16 @@ export default function Home() {
   const [testimoni, setTestimoni] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Ambil data keranjang untuk Badge Merah
   const { items } = useCart();
 
   useEffect(() => {
     async function getData() {
-      // 1. Ambil Data Toko
       const { data: dataToko } = await supabase.from('toko').select('*').single();
       if (dataToko) setToko(dataToko);
 
-      // 2. Ambil Produk
       const { data: dataProduk } = await supabase.from('produk').select('*').order('id', { ascending: false });
       if (dataProduk) setProducts(dataProduk);
 
-      // 3. Ambil Testimoni
       const { data: dataTesti } = await supabase.from('testimoni').select('*').eq('tampil', true);
       if (dataTesti) setTestimoni(dataTesti);
 
@@ -63,13 +59,12 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-blue-100 selection:text-blue-900" style={{ fontFamily: `"${toko.font_style}", sans-serif` }}>
-      {/* Load Font Dinamis */}
       <style jsx global>{` @import url('${fontMap[toko.font_style] || fontMap['Inter']}'); `}</style>
 
       {/* --- NAVBAR --- */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100 py-3 transition-all duration-300">
         <div className="container mx-auto px-4 md:px-6 flex justify-between items-center">
-            {/* LOGO AREA - LOGIKA CERDAS */}
+            {/* LOGO */}
             <Link href="/" className="flex items-center gap-2 group">
                 {toko.logo ? (
                     <img src={toko.logo} alt={toko.nama_toko} className="h-10 w-auto object-contain hover:scale-105 transition duration-300" />
@@ -93,10 +88,13 @@ export default function Home() {
                 </Link>
                 
                 <Link href="/dashboard" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 hover:bg-blue-50 text-sm font-bold text-gray-700 hover:text-blue-600 transition border border-transparent hover:border-blue-100">
-                    <span>👤 Member Area</span>
+                    <span>👤 Member</span>
                 </Link>
-                {/* Mobile Member Icon */}
-                <Link href="/dashboard" className="md:hidden text-2xl">👤</Link>
+
+                {/* 🔥 TOMBOL ADMIN RAHASIA (IKON GEAR) */}
+                <Link href="/admin" className="text-gray-300 hover:text-gray-800 transition p-2" title="Masuk Admin Panel">
+                    <FaCog className="text-lg" />
+                </Link>
             </div>
         </div>
       </nav>
@@ -128,7 +126,6 @@ export default function Home() {
                 </a>
             </div>
 
-            {/* STATISTIK TOKO */}
             <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto mt-16 border-t border-gray-200 pt-8">
                 <div><h4 className="text-2xl md:text-3xl font-black text-gray-900">{toko.total_member || '100+'}</h4><p className="text-xs md:text-sm text-gray-500 font-bold uppercase">Member Aktif</p></div>
                 <div><h4 className="text-2xl md:text-3xl font-black text-blue-600">{toko.total_terjual || '500+'}</h4><p className="text-xs md:text-sm text-gray-500 font-bold uppercase">Produk Terjual</p></div>
@@ -165,7 +162,6 @@ export default function Home() {
                                 Hemat {Math.round(((item.harga_coret - item.harga) / item.harga_coret) * 100)}%
                             </div>
                          )}
-                         
                          <div className="h-48 md:h-56 bg-gray-100 relative overflow-hidden flex items-center justify-center p-4">
                             {item.gambar ? (
                                 <img src={item.gambar} alt={item.nama_produk} className="w-full h-full object-contain group-hover:scale-110 transition duration-500" />
@@ -174,13 +170,11 @@ export default function Home() {
                             )}
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition duration-300"></div>
                         </div>
-
                         <div className="p-5 flex flex-col flex-grow">
                             <div className="mb-2">
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-1 rounded-md">{item.kategori}</span>
                             </div>
                             <h3 className="font-bold text-gray-800 text-sm md:text-lg mb-2 line-clamp-2 leading-snug group-hover:text-blue-600 transition">{item.nama_produk}</h3>
-                            
                             <div className="mt-auto pt-4 border-t border-gray-50 flex flex-col gap-1">
                                 {item.harga_coret && (
                                     <span className="text-xs text-gray-400 line-through">Rp {Number(item.harga_coret).toLocaleString('id-ID')}</span>
@@ -201,29 +195,6 @@ export default function Home() {
                 </div>
             )}
         </div>
-      </section>
-
-      {/* --- KELEBIHAN --- */}
-      <section className="py-20 bg-gray-900 text-white">
-          <div className="container mx-auto px-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                  <div className="p-8 bg-gray-800 rounded-3xl border border-gray-700 hover:border-blue-500 transition duration-300">
-                      <div className="text-4xl mb-4">⚡</div>
-                      <h3 className="text-xl font-bold mb-2">Akses Instan</h3>
-                      <p className="text-gray-400 text-sm">Setelah pembayaran berhasil, file langsung bisa didownload saat itu juga.</p>
-                  </div>
-                  <div className="p-8 bg-gray-800 rounded-3xl border border-gray-700 hover:border-blue-500 transition duration-300">
-                      <div className="text-4xl mb-4">🔒</div>
-                      <h3 className="text-xl font-bold mb-2">Transaksi Aman</h3>
-                      <p className="text-gray-400 text-sm">Menggunakan payment gateway terpercaya. Data privasi Anda terjamin 100%.</p>
-                  </div>
-                  <div className="p-8 bg-gray-800 rounded-3xl border border-gray-700 hover:border-blue-500 transition duration-300">
-                      <div className="text-4xl mb-4">🔄</div>
-                      <h3 className="text-xl font-bold mb-2">Lifetime Update</h3>
-                      <p className="text-gray-400 text-sm">Beli sekali, dapatkan update materi/file selamanya tanpa biaya tambahan.</p>
-                  </div>
-              </div>
-          </div>
       </section>
 
       {/* --- TESTIMONI --- */}
@@ -262,11 +233,6 @@ export default function Home() {
                     <p className="text-gray-500 text-sm leading-relaxed mb-6 max-w-sm">
                         Kami menyediakan produk digital berkualitas tinggi untuk membantu mempercepat pekerjaan dan bisnis Anda.
                     </p>
-                    <div className="flex gap-4">
-                        <a href="https://instagram.com" className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-pink-600 hover:text-white transition"><FaInstagram /></a>
-                        <a href="https://facebook.com" className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-blue-600 hover:text-white transition"><FaFacebookF /></a>
-                        <a href="https://tiktok.com" className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-black hover:text-white transition"><FaTiktok /></a>
-                    </div>
                 </div>
                 <div>
                     <h4 className="font-bold text-gray-900 mb-6">Menu Pintas</h4>
@@ -300,12 +266,9 @@ export default function Home() {
                     {items.length}
                 </span>
             )}
-            <span className="absolute right-full mr-4 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap top-1/2 -translate-y-1/2">Lihat Keranjang</span>
         </Link>
-        
         <a href="https://wa.me/6285314445959" target="_blank" className="bg-green-500 text-white p-4 rounded-full shadow-lg shadow-green-500/30 hover:bg-green-600 hover:scale-110 transition relative group">
             <FaWhatsapp className="text-2xl" />
-            <span className="absolute right-full mr-4 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap top-1/2 -translate-y-1/2">Chat Admin</span>
         </a>
       </div>
     </div>
