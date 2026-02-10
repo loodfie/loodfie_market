@@ -5,139 +5,168 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
+import { FaDownload, FaSignOutAlt, FaUserCircle, FaShoppingBag, FaHome } from 'react-icons/fa';
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
+  const [purchases, setPurchases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [listProduk, setListProduk] = useState<any[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    async function initDashboard() {
-      // 1. Cek Login
+    async function getUserData() {
+      // 1. Cek User Session
       const { data: { session } } = await supabase.auth.getSession();
+      
       if (!session) {
-        router.push('/masuk');
+        router.push('/masuk'); // Kalau belum login, tendang ke halaman masuk
         return;
       }
+
       setUser(session.user);
 
-      // 2. Ambil Transaksi (Tanpa filter status dulu biar data masuk semua)
-      const { data: dataTransaksi, error: errTrx } = await supabase
+      // 2. Ambil Daftar Transaksi yang LUNAS milik User ini
+      // Kita joinkan dengan tabel produk untuk dapat detail gambar & file
+      const { data: transaksi, error } = await supabase
         .from('transaksi')
-        .select('produk_id, status')
-        .eq('user_email', session.user.email);
+        .select(`
+          id,
+          created_at,
+          status,
+          produk:produk_id (
+            nama_produk,
+            gambar,
+            file_url,
+            deskripsi
+          )
+        `)
+        .eq('user_email', session.user.email)
+        .eq('status', 'LUNAS') // Hanya yang sudah lunas
+        .order('created_at', { ascending: false });
 
-      if (errTrx || !dataTransaksi || dataTransaksi.length === 0) {
-        setListProduk([]);
-        setLoading(false);
-        return;
+      if (error) {
+        console.error("Error ambil data:", error);
+      } else {
+        setPurchases(transaksi || []);
       }
-
-      // 🔥 FILTER PINTAR: Terima 'LUNAS', 'lunas', atau 'Lunas'
-      // Kita ambil ID produk yang statusnya mengandung kata "lunas"
-      const transaksiSah = dataTransaksi.filter(t => 
-        t.status && t.status.toLowerCase() === 'lunas'
-      );
-
-      if (transaksiSah.length === 0) {
-        setListProduk([]);
-        setLoading(false);
-        return;
-      }
-
-      const daftarId = transaksiSah.map(item => item.produk_id);
-
-      // 3. Ambil Detail Produk
-      const { data: dataProduk } = await supabase
-        .from('produk')
-        .select('*')
-        .in('id', daftarId);
-
-      setListProduk(dataProduk || []);
+      
       setLoading(false);
     }
 
-    initDashboard();
+    getUserData();
   }, [router]);
 
   const handleLogout = async () => {
+    const toastId = toast.loading("Keluar...");
     await supabase.auth.signOut();
-    router.push('/');
+    toast.success("Berhasil Keluar", { id: toastId });
+    router.push('/'); // Balik ke Home
   };
 
-  const handleDownload = (link: string) => {
-    if (!link) {
-      toast.error("Link file belum tersedia. Hubungi Admin.");
+  const handleDownload = (url: string) => {
+    if (!url) {
+      toast.error("File belum tersedia, hubungi Admin.");
       return;
     }
-    window.open(link, '_blank');
-    toast.success("Membuka file... 🚀");
+    window.open(url, '_blank');
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><p className="animate-pulse font-bold text-gray-500">Memuat Member Area...</p></div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
-      <Toaster position="bottom-right" />
-      
-      {/* NAVBAR */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
-        <Link href="/" className="font-bold text-xl tracking-tight text-gray-900">Loodfie Market <span className="text-blue-600 text-xs px-2 py-0.5 bg-blue-50 rounded-full border border-blue-100">Member</span></Link>
-        <div className="flex items-center gap-4">
-            <span className="text-xs text-gray-500 hidden md:block">{user?.email}</span>
-            <button onClick={handleLogout} className="text-sm font-bold text-red-600 hover:text-red-800 transition">Keluar</button>
+      <Toaster position="top-right" />
+
+      {/* NAVBAR DASHBOARD */}
+      <nav className="bg-white border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+        <div className="flex items-center gap-2">
+            <Link href="/" className="text-gray-500 hover:text-blue-600 transition flex items-center gap-1 font-bold text-sm">
+                <FaHome /> Ke Toko
+            </Link>
         </div>
+        <div className="font-bold text-gray-800">Member Area</div>
+        <button 
+            onClick={handleLogout} 
+            className="text-red-500 hover:text-red-700 font-bold text-sm flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg transition"
+        >
+            <FaSignOutAlt /> Keluar
+        </button>
       </nav>
 
-      <main className="container mx-auto px-6 py-10 max-w-5xl">
-        {/* HEADER WELCOME */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div>
-                <h1 className="text-3xl font-extrabold mb-2">Halo, Sultan! 👋</h1>
-                <p className="text-blue-100 text-sm">Ini adalah koleksi aset digital yang sudah kamu miliki.</p>
+      <main className="container mx-auto px-4 py-8 max-w-5xl">
+        
+        {/* PROFILE CARD */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-3xl p-8 text-white shadow-xl mb-10 flex flex-col md:flex-row items-center gap-6">
+            <div className="bg-white/20 p-4 rounded-full backdrop-blur-sm">
+                <FaUserCircle className="text-6xl text-white" />
             </div>
-            <div className="bg-white/10 backdrop-blur border border-white/20 p-4 rounded-2xl text-center min-w-[150px]">
-                <span className="block text-3xl font-bold">{listProduk.length}</span>
-                <span className="text-xs text-blue-100 uppercase tracking-wider font-bold">Produk Dimiliki</span>
+            <div className="text-center md:text-left">
+                <h1 className="text-2xl font-bold mb-1">Halo, {user?.email?.split('@')[0]}! 👋</h1>
+                <p className="text-blue-100 text-sm">{user?.email}</p>
+                <div className="mt-4 inline-flex items-center gap-2 bg-white/10 px-4 py-1 rounded-full text-xs font-bold border border-white/20">
+                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Member Aktif
+                </div>
             </div>
         </div>
 
-        <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">📂 Aset Saya</h2>
-        
-        {/* LOGIKA TAMPILAN */}
-        {listProduk.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
-                <span className="text-6xl mb-4 block">🛒</span>
-                <h3 className="text-lg font-bold text-gray-700 mb-2">Belum ada produk</h3>
-                <p className="text-gray-400 text-sm mb-6">Kamu belum membeli produk apapun.</p>
-                <Link href="/" className="bg-blue-600 text-white px-6 py-3 rounded-full font-bold shadow hover:bg-blue-700 transition">Jelajahi Toko</Link>
+        {/* LIST PRODUK SAYA */}
+        <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <FaShoppingBag className="text-blue-600" /> Produk Saya ({purchases.length})
+        </h2>
+
+        {purchases.length === 0 ? (
+            // TAMPILAN JIKA BELUM BELI APAPUN
+            <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-gray-300 shadow-sm">
+                <div className="text-6xl mb-4">😢</div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Belum ada produk</h3>
+                <p className="text-gray-500 mb-6">Kamu belum memiliki produk apapun. Yuk belanja dulu!</p>
+                <Link href="/" className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-blue-700 transition">
+                    Lihat Katalog
+                </Link>
             </div>
         ) : (
+            // TAMPILAN GRID PRODUK YANG DIBELI
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {listProduk.map((item) => (
-                    <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition group flex flex-col h-full">
-                        <div className="h-40 bg-gray-100 relative overflow-hidden flex items-center justify-center">
-                            <img src={item.gambar || 'https://via.placeholder.com/300'} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-                            <div className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow">LUNAS ✅</div>
+                {purchases.map((item) => (
+                    <div key={item.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition overflow-hidden flex flex-col">
+                        <div className="h-40 bg-gray-100 flex items-center justify-center relative overflow-hidden">
+                            {item.produk?.gambar ? (
+                                <img src={item.produk.gambar} className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="text-4xl">📦</span>
+                            )}
+                            <div className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow">
+                                LUNAS
+                            </div>
                         </div>
+                        
                         <div className="p-5 flex flex-col flex-grow">
-                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wide mb-1 block">{item.kategori || 'Digital Product'}</span>
-                            <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{item.nama_produk}</h3>
-                            <div className="mt-auto pt-4">
+                            <h3 className="font-bold text-gray-800 mb-2 line-clamp-2">{item.produk?.nama_produk}</h3>
+                            <p className="text-xs text-gray-400 mb-4">Dibeli pada: {new Date(item.created_at).toLocaleDateString()}</p>
+                            
+                            <div className="mt-auto">
                                 <button 
-                                    onClick={() => handleDownload(item.file_url)}
-                                    className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-600 transition shadow-lg"
+                                    onClick={() => handleDownload(item.produk?.file_url)}
+                                    className="w-full bg-blue-50 text-blue-600 border border-blue-100 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-600 hover:text-white transition group"
                                 >
-                                    ⬇️ Download File
+                                    <FaDownload className="group-hover:animate-bounce" /> Download File
                                 </button>
-                                <p className="text-[10px] text-gray-400 text-center mt-3">Akses selamanya • Garansi Update</p>
+                                {item.produk?.deskripsi && (
+                                    <p className="text-[10px] text-gray-400 mt-2 text-center italic truncate">
+                                        "{item.produk.deskripsi.substring(0, 30)}..."
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
         )}
+
       </main>
     </div>
   );
