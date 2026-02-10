@@ -1,73 +1,136 @@
 'use client'
 
 import { useCart } from '@/context/CartContext';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Toaster } from 'react-hot-toast';
+import { FaArrowLeft, FaTrash, FaWhatsapp, FaShoppingCart } from 'react-icons/fa';
+import { supabase } from '@/lib/supabase';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function KeranjangPage() {
-  const { items, removeFromCart, totalHarga } = useCart();
-  const router = useRouter();
+  const { items, removeFromCart, clearCart } = useCart(); // Pastikan clearCart ada di context, kalau tidak nanti kita adjust
+  const [total, setTotal] = useState(0);
+  const [user, setUser] = useState<any>(null);
 
-  const handleCheckout = () => {
-    if (items.length === 0) return;
+  useEffect(() => {
+    // 1. Hitung Total Harga Otomatis
+    const hitung = items.reduce((acc, item) => acc + Number(item.harga), 0);
+    setTotal(hitung);
 
-    // Format Pesan WA
-    let pesan = `Halo Admin Loodfie, saya mau Checkout barang ini dong:%0A%0A`;
-    items.forEach((item, index) => {
-      pesan += `${index + 1}. ${item.nama_produk} - Rp ${item.harga.toLocaleString('id-ID')}%0A`;
-    });
-    pesan += `%0A*Total: Rp ${totalHarga.toLocaleString('id-ID')}*`;
-    pesan += `%0A%0AMohon info rekening pembayarannya ya!`;
+    // 2. Cek User (Biar nama/emailnya masuk ke WA)
+    async function getUser() {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user || null);
+    }
+    getUser();
+  }, [items]);
 
-    window.open(`https://wa.me/6285314445959?text=${pesan}`, '_blank');
+  // 🔥 FITUR UTAMA: CHECKOUT BORONGAN KE WA
+  const handleCheckoutWA = () => {
+    if (items.length === 0) {
+        toast.error("Keranjang kosong, Bos!");
+        return;
+    }
+
+    // 1. Susun Daftar Barang
+    const daftarBarang = items.map((item, index) => {
+        return `${index + 1}. ${item.nama_produk} (Rp ${Number(item.harga).toLocaleString('id-ID')})`;
+    }).join('\n');
+
+    // 2. Susun Pesan Lengkap
+    const pesan = `Halo Admin *Loodfie Market*! 👋
+
+Saya mau checkout borongan nih:
+
+${daftarBarang}
+
+💰 *TOTAL: Rp ${total.toLocaleString('id-ID')}*
+
+👤 Email Member: ${user ? user.email : '(Belum Login)'}
+
+Mohon info rekening untuk pembayaran ya. Terima kasih!`;
+
+    // 3. Buka WhatsApp
+    const url = `https://wa.me/6285314445959?text=${encodeURIComponent(pesan)}`;
+    window.open(url, '_blank');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans pb-24">
-      <Toaster position="bottom-center" />
-      <nav className="bg-white border-b p-4 sticky top-0 z-50 flex items-center gap-4 shadow-sm">
-        <Link href="/" className="font-bold text-xl px-3 py-1 bg-gray-100 rounded-lg">⬅️</Link>
-        <h1 className="font-bold text-xl flex-grow text-center">Keranjang Belanja 🛒</h1>
-        <div className="w-10"></div>
-      </nav>
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
+      <Toaster position="top-center" />
+      
+      {/* HEADER */}
+      <div className="bg-white border-b sticky top-0 z-50 px-6 py-4 flex items-center justify-between shadow-sm">
+        <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 font-bold transition">
+            <FaArrowLeft /> Kembali Belanja
+        </Link>
+        <h1 className="font-bold text-lg flex items-center gap-2">
+            <FaShoppingCart className="text-blue-600" /> Keranjang Belanja
+        </h1>
+        <div className="w-8"></div> {/* Spacer biar tengah */}
+      </div>
 
-      <main className="container mx-auto px-4 py-6 max-w-2xl">
+      <main className="container mx-auto px-4 py-8 max-w-3xl">
+        
         {items.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-6xl mb-4">🛒</p>
-            <h2 className="text-xl font-bold text-gray-700">Keranjang Kosong</h2>
-            <Link href="/" className="inline-block mt-4 bg-blue-600 text-white px-6 py-2 rounded-full font-bold shadow hover:bg-blue-700 transition">Mulai Belanja</Link>
-          </div>
+            // TAMPILAN KOSONG
+            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
+                <div className="text-6xl mb-4">🛒</div>
+                <h2 className="text-2xl font-bold mb-2">Keranjang Kosong</h2>
+                <p className="text-gray-500 mb-8">Belum ada produk yang diamankan.</p>
+                <Link href="/" className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-blue-700 transition">
+                    Mulai Belanja
+                </Link>
+            </div>
         ) : (
-          <div className="space-y-4">
-            {items.map((item) => (
-              <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm flex gap-4 items-center border border-gray-100">
-                <img src={item.gambar} className="w-16 h-16 object-cover rounded-lg bg-gray-200 border" />
-                <div className="flex-grow">
-                  <h3 className="font-bold text-gray-800 text-sm line-clamp-2">{item.nama_produk}</h3>
-                  <p className="text-blue-600 font-extrabold text-sm">Rp {item.harga.toLocaleString('id-ID')}</p>
+            // TAMPILAN ADA BARANG
+            <div className="space-y-6">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    {items.map((item) => (
+                        <div key={item.id} className="flex gap-4 p-4 border-b last:border-0 hover:bg-gray-50 transition items-center">
+                            {/* Gambar Kecil */}
+                            <div className="h-16 w-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border">
+                                {item.gambar ? <img src={item.gambar} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center h-full">📦</span>}
+                            </div>
+                            
+                            {/* Info Produk */}
+                            <div className="flex-grow">
+                                <h3 className="font-bold text-sm md:text-base line-clamp-2">{item.nama_produk}</h3>
+                                <p className="text-blue-600 font-bold text-sm">Rp {Number(item.harga).toLocaleString('id-ID')}</p>
+                            </div>
+
+                            {/* Tombol Hapus */}
+                            <button 
+                                onClick={() => removeFromCart(item.id)}
+                                className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition"
+                                title="Hapus dari keranjang"
+                            >
+                                <FaTrash />
+                            </button>
+                        </div>
+                    ))}
                 </div>
-                <button onClick={() => removeFromCart(item.id)} className="text-red-500 bg-red-50 p-2 rounded-lg hover:bg-red-100 transition">🗑️</button>
-              </div>
-            ))}
-          </div>
+
+                {/* RINGKASAN & TOMBOL BAYAR */}
+                <div className="bg-white rounded-2xl shadow-lg border border-blue-100 p-6 sticky bottom-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <span className="text-gray-500 font-bold">Total Pembayaran</span>
+                        <span className="text-2xl font-black text-blue-600">Rp {total.toLocaleString('id-ID')}</span>
+                    </div>
+                    
+                    <button 
+                        onClick={handleCheckoutWA}
+                        className="w-full bg-green-500 text-white py-4 rounded-xl font-bold text-lg shadow-xl shadow-green-500/30 hover:bg-green-600 hover:scale-[1.02] transition transform flex items-center justify-center gap-2"
+                    >
+                        <FaWhatsapp className="text-2xl" /> Checkout via WhatsApp
+                    </button>
+                    <p className="text-center text-xs text-gray-400 mt-3">
+                        *Anda akan diarahkan ke WhatsApp Admin untuk konfirmasi pembayaran.
+                    </p>
+                </div>
+            </div>
         )}
       </main>
-
-      {items.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-[0_-5px_10px_rgba(0,0,0,0.1)] z-50">
-          <div className="container mx-auto max-w-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-gray-500 font-bold text-sm">Total Pembayaran</span>
-              <span className="text-xl font-extrabold text-blue-600">Rp {totalHarga.toLocaleString('id-ID')}</span>
-            </div>
-            <button onClick={handleCheckout} className="w-full bg-green-600 text-white py-3.5 rounded-xl font-bold text-lg hover:bg-green-700 shadow-lg flex items-center justify-center gap-2">
-               Checkout via WhatsApp 🚀
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

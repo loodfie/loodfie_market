@@ -3,19 +3,23 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { FaWhatsapp, FaShoppingCart, FaStar, FaInstagram, FaFacebookF, FaTiktok, FaCog, FaEye, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
+import { FaWhatsapp, FaShoppingCart, FaStar, FaInstagram, FaFacebookF, FaTiktok, FaCog, FaEye, FaSignInAlt, FaUserPlus, FaSearch } from 'react-icons/fa';
 import { useCart } from '@/context/CartContext';
 
 export default function Home() {
   const [products, setProducts] = useState<any[]>([]);
   
+  // 🔥 STATE BARU UNTUK PENCARIAN & FILTER
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState('Semua');
+
   // State Toko (Data Dasar dari Admin)
   const [toko, setToko] = useState<any>({
     nama_toko: 'Loodfie Market',
     deskripsi: 'Pusat Produk Digital Terlengkap',
     font_style: 'Inter',
     header_bg: null,
-    footer_bg: null, // 🔥 Background Footer akan dibaca di sini
+    footer_bg: null,
     logo: null,
     total_member: '185', 
     total_terjual: '201', 
@@ -61,14 +65,8 @@ export default function Home() {
       if (dataTesti) setTestimoni(dataTesti);
 
       // 5. HITUNG DATA REAL (Member & Penjualan)
-      const { count: realMemberCount } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-
-      const { count: realSalesCount } = await supabase
-        .from('transaksi')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'LUNAS');
+      const { count: realMemberCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+      const { count: realSalesCount } = await supabase.from('transaksi').select('*', { count: 'exact', head: true }).eq('status', 'LUNAS');
       
       setStats({
         member: realMemberCount || 0,
@@ -79,6 +77,17 @@ export default function Home() {
     }
     getData();
   }, []);
+
+  // --- LOGIKA FILTERING PRODUK (SEARCH & KATEGORI) ---
+  // 1. Ambil daftar kategori unik dari produk yang ada
+  const categories = ['Semua', ...Array.from(new Set(products.map(p => p.kategori)))];
+
+  // 2. Filter produk berdasarkan Search Text & Kategori yang dipilih
+  const filteredProducts = products.filter(item => {
+    const matchSearch = item.nama_produk.toLowerCase().includes(search.toLowerCase());
+    const matchCategory = activeCategory === 'Semua' || item.kategori === activeCategory;
+    return matchSearch && matchCategory;
+  });
 
   // --- LOGIKA PENJUMLAHAN (DASAR + ASLI) ---
   const displayMember = (parseInt(toko.total_member) || 0) + stats.member;
@@ -111,7 +120,6 @@ export default function Home() {
       {/* --- NAVBAR --- */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100 py-3 transition-all duration-300">
         <div className="container mx-auto px-4 md:px-6 flex justify-between items-center">
-            {/* LOGO */}
             <Link href="/" className="flex items-center gap-2 group">
                 {toko.logo ? (
                     <img src={toko.logo} alt={toko.nama_toko} className="h-10 w-auto object-contain hover:scale-105 transition duration-300" />
@@ -123,7 +131,6 @@ export default function Home() {
                 )}
             </Link>
 
-            {/* MENU KANAN (NAVBAR PINTAR) */}
             <div className="flex items-center gap-3 md:gap-4">
                 <Link href="/keranjang" className="relative p-2 group mr-2">
                     <FaShoppingCart className="text-xl text-gray-600 group-hover:text-blue-600 transition" />
@@ -218,13 +225,49 @@ export default function Home() {
       {/* --- PRODUK SECTION --- */}
       <section id="produk" className="py-20 bg-white relative">
         <div className="container mx-auto px-6">
-            <div className="text-center mb-16">
+            <div className="text-center mb-10">
                 <h2 className="text-3xl md:text-4xl font-black mb-4">Produk Unggulan 🔥</h2>
                 <div className="w-20 h-1.5 bg-blue-600 mx-auto rounded-full"></div>
             </div>
 
+            {/* 🔥 AREA PENCARIAN & FILTER KATEGORI (FITUR BARU) */}
+            <div className="max-w-4xl mx-auto mb-12 space-y-6">
+                
+                {/* 1. SEARCH BAR */}
+                <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <FaSearch className="text-gray-400 group-focus-within:text-blue-600 transition" />
+                    </div>
+                    <input 
+                        type="text" 
+                        placeholder="Cari produk apa hari ini? (Misal: Python, Canva...)" 
+                        className="w-full pl-12 pr-6 py-4 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition outline-none shadow-sm text-lg"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
+
+                {/* 2. KATEGORI CHIPS (TABS) */}
+                <div className="flex flex-wrap justify-center gap-2">
+                    {categories.map((cat) => (
+                        <button 
+                            key={cat}
+                            onClick={() => setActiveCategory(cat)}
+                            className={`px-5 py-2 rounded-full text-sm font-bold transition-all transform active:scale-95 ${
+                                activeCategory === cat 
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-105' 
+                                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                            }`}
+                        >
+                            {cat}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* GRID PRODUK (YANG SUDAH DI-FILTER) */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
-                {products.map((item) => (
+                {filteredProducts.map((item) => (
                     <Link href={`/produk/${item.id}`} key={item.id} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition duration-300 flex flex-col h-full overflow-hidden relative">
                          
                          {item.harga_coret && item.harga_coret > item.harga && (
@@ -269,9 +312,18 @@ export default function Home() {
                 ))}
             </div>
             
-            {products.length === 0 && (
-                <div className="text-center py-20 bg-gray-50 rounded-3xl border border-dashed border-gray-300">
-                    <p className="text-gray-400 font-bold">Belum ada produk yang diupload.</p>
+            {/* PESAN JIKA TIDAK ADA HASIL PENCARIAN */}
+            {filteredProducts.length === 0 && (
+                <div className="text-center py-20 bg-gray-50 rounded-3xl border border-dashed border-gray-300 animate-fade-in-up">
+                    <p className="text-6xl mb-4">🧐</p>
+                    <h3 className="text-xl font-bold text-gray-800">Ups, produk tidak ditemukan!</h3>
+                    <p className="text-gray-500 mt-2">Coba kata kunci lain atau pilih kategori "Semua".</p>
+                    <button 
+                        onClick={() => { setSearch(''); setActiveCategory('Semua'); }}
+                        className="mt-6 px-6 py-2 bg-blue-100 text-blue-600 rounded-full font-bold hover:bg-blue-200 transition"
+                    >
+                        🔄 Reset Pencarian
+                    </button>
                 </div>
             )}
         </div>
@@ -302,16 +354,14 @@ export default function Home() {
           </section>
       )}
 
-      {/* --- FOOTER (PERBAIKAN: FITUR LAMA DIKEMBALIKAN) --- */}
+      {/* --- FOOTER --- */}
       <footer className="relative bg-gray-900 text-white pt-20 pb-10 border-t-4 border-blue-500 overflow-hidden mt-20">
         
-        {/* 🔥 LOGIKA BACKGROUND IMAGE DIKEMBALIKAN */}
         {toko.footer_bg && (
             <>
                 <div className="absolute inset-0 z-0">
                     <img src={toko.footer_bg} alt="Footer Background" className="w-full h-full object-cover opacity-60" />
                 </div>
-                {/* Overlay Hitam Transparan supaya teks terbaca */}
                 <div className="absolute inset-0 bg-black/80 z-0"></div>
             </>
         )}
