@@ -15,7 +15,7 @@ export default function Home() {
     deskripsi: 'Pusat Produk Digital Terlengkap',
     font_style: 'Inter',
     header_bg: null,
-    footer_bg: null,
+    footer_bg: null, // 🔥 Background Footer akan dibaca di sini
     logo: null,
     total_member: '185', 
     total_terjual: '201', 
@@ -36,13 +36,19 @@ export default function Home() {
   
   const { items } = useCart();
 
+  const socialLinks = {
+    instagram: "https://www.instagram.com/loodfie/", 
+    facebook: "https://www.facebook.com/loodfie",
+    tiktok: "https://www.tiktok.com/@loodfie"
+  };
+
   useEffect(() => {
     async function getData() {
-      // 1. Cek User Session (PENTING BUAT NAVBAR)
+      // 1. Cek User Session
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user || null);
 
-      // 2. Ambil Data Toko (Angka Dasar)
+      // 2. Ambil Data Toko
       const { data: dataToko } = await supabase.from('toko').select('*').single();
       if (dataToko) setToko(dataToko);
 
@@ -119,7 +125,6 @@ export default function Home() {
 
             {/* MENU KANAN (NAVBAR PINTAR) */}
             <div className="flex items-center gap-3 md:gap-4">
-                {/* 1. Keranjang (Selalu Muncul) */}
                 <Link href="/keranjang" className="relative p-2 group mr-2">
                     <FaShoppingCart className="text-xl text-gray-600 group-hover:text-blue-600 transition" />
                     {items.length > 0 && (
@@ -129,14 +134,11 @@ export default function Home() {
                     )}
                 </Link>
                 
-                {/* 2. Logika Tombol Login/Member */}
                 {user ? (
-                    // KALAU SUDAH LOGIN -> Tampil Tombol Member
                     <Link href="/dashboard" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 hover:bg-blue-100 text-sm font-bold text-blue-700 transition border border-blue-200">
                         <span>👤 Member Area</span>
                     </Link>
                 ) : (
-                    // KALAU BELUM LOGIN -> Tampil Tombol Masuk & Daftar
                     <div className="flex items-center gap-2">
                         <Link href="/masuk" className="hidden md:flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition border border-transparent">
                            <FaSignInAlt /> Masuk
@@ -147,11 +149,9 @@ export default function Home() {
                     </div>
                 )}
 
-                {/* Mobile Member Icon (Hanya di HP) */}
                 {user && <Link href="/dashboard" className="md:hidden text-2xl text-blue-600">👤</Link>}
                 {!user && <Link href="/masuk" className="md:hidden text-2xl text-gray-600"><FaSignInAlt /></Link>}
 
-                {/* Tombol Admin Rahasia */}
                 <Link href="/admin" className="text-gray-300 hover:text-gray-800 transition p-2" title="Masuk Admin Panel">
                     <FaCog className="text-lg" />
                 </Link>
@@ -186,7 +186,6 @@ export default function Home() {
                 </a>
             </div>
 
-            {/* 🔥 STATISTIK TOKO OTOMATIS */}
             <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto mt-16 border-t border-gray-200 pt-8">
                 <div>
                     <h4 className="text-2xl md:text-3xl font-black text-gray-900">{displayMember}+</h4>
@@ -303,37 +302,59 @@ export default function Home() {
           </section>
       )}
 
-      {/* --- FOOTER --- */}
-      <footer className="bg-white pt-20 pb-10 border-t border-gray-200">
-        <div className="container mx-auto px-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-                <div className="col-span-1 md:col-span-2">
-                    <div className="flex items-center gap-2 mb-6">
-                        {toko.logo ? <img src={toko.logo} className="h-8 w-auto" /> : <span className="font-black text-2xl text-gray-900">{toko.nama_toko}</span>}
+      {/* --- FOOTER (PERBAIKAN: FITUR LAMA DIKEMBALIKAN) --- */}
+      <footer className="relative bg-gray-900 text-white pt-20 pb-10 border-t-4 border-blue-500 overflow-hidden mt-20">
+        
+        {/* 🔥 LOGIKA BACKGROUND IMAGE DIKEMBALIKAN */}
+        {toko.footer_bg && (
+            <>
+                <div className="absolute inset-0 z-0">
+                    <img src={toko.footer_bg} alt="Footer Background" className="w-full h-full object-cover opacity-60" />
+                </div>
+                {/* Overlay Hitam Transparan supaya teks terbaca */}
+                <div className="absolute inset-0 bg-black/80 z-0"></div>
+            </>
+        )}
+
+        <div className="relative container mx-auto px-6 z-10">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                <div>
+                    <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+                        <span className="bg-gradient-to-br from-blue-600 to-cyan-500 text-white w-7 h-7 rounded-lg flex items-center justify-center text-xs shadow-lg">L</span>
+                        {toko.nama_toko}
+                    </h3>
+                    <p className="text-gray-300 text-sm leading-relaxed mb-4 pr-4">Platform jual beli produk digital terpercaya. Garansi akses selamanya.</p>
+                    <div className="flex gap-2.5">
+                        <a href={socialLinks.instagram} target="_blank" className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center hover:bg-pink-600 hover:text-white transition cursor-pointer shadow border border-gray-700 text-lg"><FaInstagram /></a>
+                        <a href={socialLinks.facebook} target="_blank" className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition cursor-pointer shadow border border-gray-700 text-lg"><FaFacebookF /></a>
+                        <a href={socialLinks.tiktok} target="_blank" className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center hover:bg-black hover:text-white hover:border-white transition cursor-pointer shadow border border-gray-700 text-lg"><FaTiktok /></a>
                     </div>
-                    <p className="text-gray-500 text-sm leading-relaxed mb-6 max-w-sm">
-                        Kami menyediakan produk digital berkualitas tinggi untuk membantu mempercepat pekerjaan dan bisnis Anda.
-                    </p>
                 </div>
                 <div>
-                    <h4 className="font-bold text-gray-900 mb-6">Menu Pintas</h4>
-                    <ul className="space-y-3 text-sm text-gray-500">
-                        <li><Link href="/" className="hover:text-blue-600 transition">Beranda</Link></li>
-                        <li><Link href="/keranjang" className="hover:text-blue-600 transition">Keranjang Belanja</Link></li>
-                        <li><Link href="/dashboard" className="hover:text-blue-600 transition">Member Area</Link></li>
+                    <h4 className="text-sm font-bold mb-3 text-blue-400 uppercase tracking-wider">Menu Pintas</h4>
+                    <ul className="space-y-2 text-gray-300 text-sm">
+                        <li><Link href="/" className="hover:text-white transition flex items-center gap-2">🏠 Beranda</Link></li>
+                        <li><Link href="/dashboard" className="hover:text-white transition flex items-center gap-2">👤 Member Area</Link></li>
                     </ul>
                 </div>
                 <div>
-                    <h4 className="font-bold text-gray-900 mb-6">Pembayaran</h4>
-                    <div className="flex flex-wrap gap-2">
-                        {['BCA', 'Mandiri', 'BNI', 'BRI', 'QRIS', 'Gopay', 'Dana'].map(bank => (
-                            <span key={bank} className="px-3 py-1 bg-gray-100 rounded text-xs font-bold text-gray-600 border border-gray-200">{bank}</span>
+                    <h4 className="text-sm font-bold mb-3 text-blue-400 uppercase tracking-wider">Metode Pembayaran</h4>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                        {['BCA', 'Mandiri', 'BRI', 'DANA', 'OVO', 'Gopay', 'QRIS'].map((bank) => (
+                            <span key={bank} className="bg-white text-blue-900 px-2 py-0.5 rounded font-bold text-[9px] shadow-sm cursor-default">{bank}</span>
                         ))}
+                    </div>
+                    <div className="p-3 bg-gray-800/80 backdrop-blur rounded-xl border border-gray-700 flex items-center gap-3">
+                        <span className="text-xl">🔒</span>
+                        <div>
+                            <p className="text-xs font-bold text-gray-200">Jaminan Keamanan 100%</p>
+                            <p className="text-[9px] text-gray-400 mt-0.5">Transaksi terenkripsi & data privasi terjaga.</p>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div className="border-t border-gray-100 pt-8 text-center">
-                <p className="text-gray-400 text-sm">&copy; {new Date().getFullYear()} {toko.nama_toko}. All rights reserved.</p>
+            <div className="border-t border-gray-800 pt-4 text-center relative z-10">
+                <p className="text-gray-500 text-xs">&copy; {new Date().getFullYear()} <span className="text-white font-bold">{toko.nama_toko}</span>. All rights reserved.</p>
             </div>
         </div>
       </footer>
