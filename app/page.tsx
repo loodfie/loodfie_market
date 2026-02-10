@@ -3,19 +3,34 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { FaWhatsapp, FaShoppingCart, FaStar, FaInstagram, FaFacebookF, FaTiktok, FaCog, FaEye } from 'react-icons/fa';
+import { FaWhatsapp, FaShoppingCart, FaStar, FaInstagram, FaFacebookF, FaTiktok, FaCog, FaEye, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
 import { useCart } from '@/context/CartContext';
 
 export default function Home() {
   const [products, setProducts] = useState<any[]>([]);
+  
+  // State Toko (Data Dasar dari Admin)
   const [toko, setToko] = useState<any>({
     nama_toko: 'Loodfie Market',
     deskripsi: 'Pusat Produk Digital Terlengkap',
     font_style: 'Inter',
     header_bg: null,
     footer_bg: null,
-    logo: null
+    logo: null,
+    total_member: '185', 
+    total_terjual: '201', 
+    kepuasan: '99%'
   });
+
+  // State Statistik Real-Time
+  const [stats, setStats] = useState({
+    member: 0,
+    terjual: 0
+  });
+
+  // State User (Untuk Cek Login di Navbar)
+  const [user, setUser] = useState<any>(null);
+
   const [testimoni, setTestimoni] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -23,19 +38,45 @@ export default function Home() {
 
   useEffect(() => {
     async function getData() {
+      // 1. Cek User Session (PENTING BUAT NAVBAR)
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user || null);
+
+      // 2. Ambil Data Toko (Angka Dasar)
       const { data: dataToko } = await supabase.from('toko').select('*').single();
       if (dataToko) setToko(dataToko);
 
+      // 3. Ambil Produk
       const { data: dataProduk } = await supabase.from('produk').select('*').order('id', { ascending: false });
       if (dataProduk) setProducts(dataProduk);
 
+      // 4. Ambil Testimoni
       const { data: dataTesti } = await supabase.from('testimoni').select('*').eq('tampil', true);
       if (dataTesti) setTestimoni(dataTesti);
+
+      // 5. HITUNG DATA REAL (Member & Penjualan)
+      const { count: realMemberCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      const { count: realSalesCount } = await supabase
+        .from('transaksi')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'LUNAS');
+      
+      setStats({
+        member: realMemberCount || 0,
+        terjual: realSalesCount || 0
+      });
 
       setLoading(false);
     }
     getData();
   }, []);
+
+  // --- LOGIKA PENJUMLAHAN (DASAR + ASLI) ---
+  const displayMember = (parseInt(toko.total_member) || 0) + stats.member;
+  const displayTerjual = (parseInt(toko.total_terjual) || 0) + stats.terjual;
 
   const fontMap: any = {
     'Inter': 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap',
@@ -76,9 +117,10 @@ export default function Home() {
                 )}
             </Link>
 
-            {/* MENU KANAN */}
-            <div className="flex items-center gap-4 md:gap-6">
-                <Link href="/keranjang" className="relative p-2 group">
+            {/* MENU KANAN (NAVBAR PINTAR) */}
+            <div className="flex items-center gap-3 md:gap-4">
+                {/* 1. Keranjang (Selalu Muncul) */}
+                <Link href="/keranjang" className="relative p-2 group mr-2">
                     <FaShoppingCart className="text-xl text-gray-600 group-hover:text-blue-600 transition" />
                     {items.length > 0 && (
                         <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold animate-bounce shadow-sm">
@@ -87,11 +129,29 @@ export default function Home() {
                     )}
                 </Link>
                 
-                <Link href="/dashboard" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 hover:bg-blue-50 text-sm font-bold text-gray-700 hover:text-blue-600 transition border border-transparent hover:border-blue-100">
-                    <span>👤 Member</span>
-                </Link>
+                {/* 2. Logika Tombol Login/Member */}
+                {user ? (
+                    // KALAU SUDAH LOGIN -> Tampil Tombol Member
+                    <Link href="/dashboard" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 hover:bg-blue-100 text-sm font-bold text-blue-700 transition border border-blue-200">
+                        <span>👤 Member Area</span>
+                    </Link>
+                ) : (
+                    // KALAU BELUM LOGIN -> Tampil Tombol Masuk & Daftar
+                    <div className="flex items-center gap-2">
+                        <Link href="/masuk" className="hidden md:flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition border border-transparent">
+                           <FaSignInAlt /> Masuk
+                        </Link>
+                        <Link href="/daftar" className="flex items-center gap-1 px-4 py-2 rounded-full bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition transform hover:scale-105">
+                           <FaUserPlus /> Daftar
+                        </Link>
+                    </div>
+                )}
 
-                {/* TOMBOL ADMIN RAHASIA */}
+                {/* Mobile Member Icon (Hanya di HP) */}
+                {user && <Link href="/dashboard" className="md:hidden text-2xl text-blue-600">👤</Link>}
+                {!user && <Link href="/masuk" className="md:hidden text-2xl text-gray-600"><FaSignInAlt /></Link>}
+
+                {/* Tombol Admin Rahasia */}
                 <Link href="/admin" className="text-gray-300 hover:text-gray-800 transition p-2" title="Masuk Admin Panel">
                     <FaCog className="text-lg" />
                 </Link>
@@ -126,10 +186,20 @@ export default function Home() {
                 </a>
             </div>
 
+            {/* 🔥 STATISTIK TOKO OTOMATIS */}
             <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto mt-16 border-t border-gray-200 pt-8">
-                <div><h4 className="text-2xl md:text-3xl font-black text-gray-900">{toko.total_member || '100+'}</h4><p className="text-xs md:text-sm text-gray-500 font-bold uppercase">Member Aktif</p></div>
-                <div><h4 className="text-2xl md:text-3xl font-black text-blue-600">{toko.total_terjual || '500+'}</h4><p className="text-xs md:text-sm text-gray-500 font-bold uppercase">Produk Terjual</p></div>
-                <div><h4 className="text-2xl md:text-3xl font-black text-gray-900">{toko.kepuasan || '4.9'}</h4><p className="text-xs md:text-sm text-gray-500 font-bold uppercase">Rating Kepuasan</p></div>
+                <div>
+                    <h4 className="text-2xl md:text-3xl font-black text-gray-900">{displayMember}+</h4>
+                    <p className="text-xs md:text-sm text-gray-500 font-bold uppercase">Member Aktif</p>
+                </div>
+                <div>
+                    <h4 className="text-2xl md:text-3xl font-black text-blue-600">{displayTerjual}+</h4>
+                    <p className="text-xs md:text-sm text-gray-500 font-bold uppercase">Produk Terjual</p>
+                </div>
+                <div>
+                    <h4 className="text-2xl md:text-3xl font-black text-gray-900">{toko.kepuasan || '99%'}</h4>
+                    <p className="text-xs md:text-sm text-gray-500 font-bold uppercase">Rating Kepuasan</p>
+                </div>
             </div>
         </div>
       </header>
@@ -164,7 +234,6 @@ export default function Home() {
                             </div>
                          )}
 
-                         {/* 🔥 AREA GAMBAR (DENGAN EFEK OVERLAY "DETAIL") */}
                          <div className="h-48 md:h-56 bg-gray-100 relative overflow-hidden flex items-center justify-center p-4">
                             {item.gambar ? (
                                 <img src={item.gambar} alt={item.nama_produk} className="w-full h-full object-contain group-hover:scale-110 transition duration-500" />
@@ -172,16 +241,13 @@ export default function Home() {
                                 <span className="text-4xl">📦</span>
                             )}
                             
-                            {/* OVERLAY GELAP SAAT HOVER */}
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
-                                {/* TOMBOL "LIHAT DETAIL" */}
                                 <div className="bg-white/90 text-gray-900 px-4 py-2 rounded-full font-bold text-xs md:text-sm flex items-center gap-2 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition duration-300">
                                     <FaEye className="text-blue-600" /> Lihat Detail
                                 </div>
                             </div>
                         </div>
 
-                        {/* AREA INFORMASI (HANYA JUDUL & HARGA) */}
                         <div className="p-5 flex flex-col flex-grow">
                             <div className="mb-2">
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-1 rounded-md">{item.kategori}</span>
@@ -190,8 +256,6 @@ export default function Home() {
                                 {item.nama_produk}
                             </h3>
                             
-                            {/* Deskripsi dihilangkan agar tampilan bersih & user penasaran klik detail */}
-
                             <div className="mt-auto pt-4 border-t border-gray-50 flex flex-col gap-1">
                                 {item.harga_coret && (
                                     <span className="text-xs text-gray-400 line-through">Rp {Number(item.harga_coret).toLocaleString('id-ID')}</span>
