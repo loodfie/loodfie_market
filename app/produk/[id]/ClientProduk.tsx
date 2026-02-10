@@ -16,7 +16,7 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
   const [loading, setLoading] = useState(true);
   const [viewers, setViewers] = useState(0);
   
-  // 🔥 STATE USER
+  // STATE USER
   const [user, setUser] = useState<any>(null);
 
   const { addToCart, items } = useCart();
@@ -25,7 +25,7 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
     nama_toko: 'Loodfie Market', 
     footer_bg: null,
     font_style: 'Inter',
-    pesan_login: '🔒 Eits, Member Only! Silakan Login atau Daftar dulu ya.' // Default jika database kosong
+    pesan_login: '🔒 Eits, Member Only! Silakan Login atau Daftar dulu ya.' 
   });
 
   const socialLinks = {
@@ -42,7 +42,7 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user || null);
 
-      // 2. Ambil Data Toko (Termasuk Pesan Login)
+      // 2. Ambil Data Toko
       const { data: dataToko } = await supabase.from('toko').select('*').single();
       if (dataToko) setToko(dataToko);
 
@@ -74,10 +74,9 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
     getData();
   }, [idProduk]);
 
-  // 🔥 FUNGSI PENJAGA GERBANG (DINAMIS DARI DATABASE)
+  // FUNGSI PENJAGA GERBANG
   const cekWajibLogin = () => {
     if (!user) {
-      // Menggunakan pesan dari database
       toast.error(toko.pesan_login || "🔒 Silakan login terlebih dahulu.", {
         icon: '🔐',
         duration: 4000
@@ -102,11 +101,24 @@ export default function ClientProduk({ idProduk }: { idProduk: string }) {
   const handleBeliLangsung = () => {
       if (!cekWajibLogin()) return;
 
+      // Cek apakah ada Link Mayar (Otomatis)
       if (produk.link_mayar && produk.link_mayar.startsWith('http')) {
         window.open(produk.link_mayar, '_blank');
       } else {
-        const text = `Halo Admin, saya (Member: ${user.email}) mau beli satuan: ${produk.nama_produk}. Mohon info pembayarannya.`;
-        window.open(`https://wa.me/6285314445959?text=${encodeURIComponent(text)}`, '_blank');
+        // 🔥 FORMAT PESAN WA BARU (LEBIH RAPI & PROFESIONAL)
+        const pesan = `Halo Admin *${toko.nama_toko}*! 👋
+
+Saya ingin membeli produk berikut:
+📦 *${produk.nama_produk}*
+💰 Harga: Rp ${Number(produk.harga).toLocaleString('id-ID')}
+
+👤 Email Member: ${user.email}
+
+Mohon info rekening pembayarannya ya. Terima kasih!`;
+
+        // Encode pesan agar spasi dan enter terbaca di URL WA
+        const urlWA = `https://wa.me/6285314445959?text=${encodeURIComponent(pesan)}`;
+        window.open(urlWA, '_blank');
       }
   };
 
