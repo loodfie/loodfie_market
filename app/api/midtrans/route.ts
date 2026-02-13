@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import Midtrans from 'midtrans-client'; // 👈 Kita pakai import, bukan require
+
+// @ts-ignore
+import Midtrans from 'midtrans-client'; // 👈 Mantra ini bikin error merah jadi hilang!
 
 export async function POST(request: Request) {
     const { id, total, items, customer } = await request.json();
 
-    // 1. Setup Snap Midtrans
     const snap = new Midtrans.Snap({
-        isProduction: true, // Mode Live
+        isProduction: true, // Live Mode
         serverKey: process.env.MIDTRANS_SERVER_KEY,
         clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY,
     });
@@ -27,13 +28,11 @@ export async function POST(request: Request) {
     };
 
     try {
-        // 2. Minta Token
         const token = await snap.createTransaction(parameter);
         console.log("✅ Token Sukses:", token);
         return NextResponse.json(token);
     } catch (error: any) {
-        console.error("🔥 Gagal Minta Token:", error.message);
-        // Kirim pesan error detail ke Frontend biar ketahuan
+        console.error("🔥 Error Midtrans:", error.message);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
