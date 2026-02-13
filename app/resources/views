@@ -1,0 +1,7 @@
+@extends('layout')
+
+@section('konten')
+    <h1>Selamat Datang di Website Saya! 🏠</h1>
+    <p>Ini adalah halaman depan. Saya sedang belajar membuat website dinamis dengan Laravel.</p>
+    <p>Silakan klik menu di atas untuk berpindah halaman.</p>
+@endsection
