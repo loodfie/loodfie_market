@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { FaShoppingCart, FaWhatsapp, FaSearch, FaUser, FaSignOutAlt, FaStar, FaUsers, FaDownload, FaCheckCircle, Facogs } from 'react-icons/fa'; // Facogs untuk icon admin
+// PERBAIKAN FINAL: FaWhatsapp (W besar) dan FaCog (Icon Admin Standar)
+import { FaShoppingCart, FaWhatsapp, FaSearch, FaUser, FaSignOutAlt, FaStar, FaUsers, FaDownload, FaCheckCircle, FaCog } from 'react-icons/fa'; 
 import { useCart } from '@/context/CartContext';
 import toast, { Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -39,6 +40,7 @@ export default function Home() {
       setUser(currentUser);
 
       // 2. Cek Apakah User Adalah Admin?
+      // Pastikan email ini SAMA PERSIS dengan email login Bos di .env.local
       if (currentUser && currentUser.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
         setIsAdmin(true);
       } else {
@@ -117,10 +119,10 @@ export default function Home() {
 
           <div className="flex items-center gap-3 md:gap-4">
             
-            {/* 🔥 TOMBOL ADMIN (Hanya Muncul Jika Admin Login) 🔥 */}
+            {/* 🔥 TOMBOL ADMIN (HANYA MUNCUL JIKA ADMIN LOGIN) 🔥 */}
             {isAdmin && (
                 <Link href="/admin" className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-black transition flex items-center gap-2 shadow-lg">
-                    <Facogs /> Admin Panel
+                    <FaCog /> Admin Panel
                 </Link>
             )}
 
