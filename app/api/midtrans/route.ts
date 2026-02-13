@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 // @ts-ignore
-import Midtrans from 'midtrans-client'; // 👈 Mantra ini bikin error merah jadi hilang!
+import Midtrans from 'midtrans-client'; // 
 
 export async function POST(request: Request) {
     const { id, total, items, customer } = await request.json();
