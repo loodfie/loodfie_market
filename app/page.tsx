@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { FaShoppingCart, FaWhatsapp, FaSearch, FaUser, FaSignOutAlt } from 'react-icons/fa';
+import { FaShoppingCart, FaWhatsapp, FaSearch, FaUser, FaSignOutAlt, FaStar, FaUsers, FaDownload, FaCheckCircle, Facogs } from 'react-icons/fa'; // Facogs untuk icon admin
 import { useCart } from '@/context/CartContext';
 import toast, { Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -12,42 +12,79 @@ export default function Home() {
   const [produk, setProduk] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false); // Status Admin
   const [keyword, setKeyword] = useState('');
-  const { items } = useCart(); // Ambil data keranjang
+  const [stats, setStats] = useState({ members: 120, downloads: 450, products: 0 });
+  const [toko, setToko] = useState<any>({
+    nama_toko: 'Loodfie Market',
+    header_bg: null,
+    deskripsi: 'Pusat Produk Digital Terbaik & Terpercaya'
+  });
+  
+  const { items } = useCart(); 
   const router = useRouter();
 
-  // Load Data saat website dibuka
+  // Data Dummy Testimoni
+  const testimoni = [
+    { nama: "Budi Santoso", role: "Programmer", text: "Source code-nya rapi banget, langsung jalan tanpa error!", rating: 5 },
+    { nama: "Siti Aminah", role: "Content Creator", text: "E-book videonya sangat membantu saya bikin konten viral.", rating: 5 },
+    { nama: "Rahmat Hidayat", role: "Mahasiswa", text: "Harganya murah tapi kualitas materinya daging semua.", rating: 4 },
+  ];
+
   useEffect(() => {
     async function getData() {
-      // 1. Cek Apakah User Sudah Login?
+      // 1. Cek User Session
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
+      const currentUser = session?.user || null;
+      setUser(currentUser);
 
-      // 2. Ambil Daftar Produk dari Database
-      const { data, error } = await supabase
+      // 2. Cek Apakah User Adalah Admin?
+      if (currentUser && currentUser.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+
+      // 3. Ambil Data Produk
+      const { data: dataProduk } = await supabase
         .from('produk')
         .select('*')
         .order('id', { ascending: false });
 
-      if (data) setProduk(data);
+      if (dataProduk) {
+        setProduk(dataProduk);
+        setStats(prev => ({ ...prev, products: dataProduk.length }));
+      }
+
+      // 4. Ambil Info Toko
+      const { data: dataToko } = await supabase.from('toko').select('*').single();
+      if (dataToko) setToko(dataToko);
+
+      // 5. Simulasi Statistik
+      setStats(prev => ({ 
+        ...prev, 
+        members: 150 + Math.floor(Math.random() * 50),
+        downloads: 500 + Math.floor(Math.random() * 100) 
+      }));
+
       setLoading(false);
     }
 
     getData();
   }, []);
 
-  // Fitur Logout
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setIsAdmin(false);
     toast.success("Berhasil Logout 👋");
-    window.location.reload(); // Refresh halaman biar keranjang terkunci lagi
+    window.location.reload(); 
   };
 
-  // Logika Tombol Keranjang (SATPAM)
+  // Logika Satpam Keranjang
   const handleCartClick = (e: any) => {
     if (!user) {
-      e.preventDefault(); // Cegah masuk ke halaman keranjang
+      e.preventDefault(); 
       toast.error("🔒 Eits, Login dulu kalau mau lihat keranjang!", {
         icon: '🔐',
         style: { borderRadius: '10px', background: '#333', color: '#fff' },
@@ -61,38 +98,39 @@ export default function Home() {
       <Toaster position="top-center" />
 
       {/* --- NAVBAR --- */}
-      <nav className="bg-white sticky top-0 z-50 shadow-sm border-b border-gray-100">
+      <nav className="bg-white sticky top-0 z-50 shadow-sm border-b border-gray-100/50 backdrop-blur-md bg-white/90">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between gap-4">
-          
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="bg-blue-600 text-white p-2 rounded-lg font-black text-xl">L</div>
-            <span className="font-bold text-xl tracking-tight text-gray-900 hidden md:block">Loodfie Market</span>
+            <div className="bg-blue-600 text-white p-2 rounded-xl font-black text-xl shadow-blue-500/20 shadow-lg">L</div>
+            <span className="font-bold text-xl tracking-tight text-gray-900 hidden md:block">{toko.nama_toko}</span>
           </Link>
 
-          {/* Search Bar */}
           <div className="flex-1 max-w-md hidden md:flex relative">
              <input 
                type="text" 
-               placeholder="Cari produk apa Bos?..." 
-               className="w-full bg-gray-100 border-none rounded-full py-3 px-5 pl-12 focus:ring-2 focus:ring-blue-500 transition outline-none"
+               placeholder="Cari aset digital..." 
+               className="w-full bg-gray-100 border-none rounded-full py-3 px-5 pl-12 focus:ring-2 focus:ring-blue-500 transition outline-none text-sm"
                onChange={(e) => setKeyword(e.target.value)}
              />
              <FaSearch className="absolute left-4 top-3.5 text-gray-400" />
           </div>
 
-          {/* Menu Kanan (Keranjang & User) */}
-          <div className="flex items-center gap-3 md:gap-5">
+          <div className="flex items-center gap-3 md:gap-4">
             
-            {/* 🛒 TOMBOL KERANJANG (SUDAH DIJAGA SATPAM) */}
+            {/* 🔥 TOMBOL ADMIN (Hanya Muncul Jika Admin Login) 🔥 */}
+            {isAdmin && (
+                <Link href="/admin" className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-black transition flex items-center gap-2 shadow-lg">
+                    <Facogs /> Admin Panel
+                </Link>
+            )}
+
+            {/* KERANJANG */}
             <Link 
                 href={user ? "/keranjang" : "#"} 
                 onClick={handleCartClick}
                 className="relative p-3 rounded-full hover:bg-gray-100 transition group"
             >
                 <FaShoppingCart className={`text-xl ${user ? 'text-gray-700 group-hover:text-blue-600' : 'text-gray-300'}`} />
-                
-                {/* Badge Angka (HANYA MUNCUL KALAU SUDAH LOGIN & ADA ISI) */}
                 {user && items.length > 0 && (
                     <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold border-2 border-white animate-bounce">
                         {items.length}
@@ -100,7 +138,6 @@ export default function Home() {
                 )}
             </Link>
 
-            {/* Tombol Login / User Profile */}
             {user ? (
                 <div className="flex items-center gap-3">
                     <Link href="/dashboard" className="hidden md:flex flex-col items-end">
@@ -121,62 +158,84 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* --- HERO SECTION (BANNER) --- */}
+      {/* --- HERO SECTION --- */}
       {!keyword && (
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-12 md:py-20 mb-10">
-            <div className="container mx-auto px-4 text-center">
-                <h1 className="text-3xl md:text-5xl font-black mb-4 tracking-tight">Belanja Digital Gak Pake Ribet.</h1>
-                <p className="text-blue-100 text-lg md:text-xl max-w-2xl mx-auto mb-8">Temukan e-book, source code, dan aset digital terbaik untuk upgrade skill kamu sekarang juga.</p>
+        <div className="relative bg-gray-900 text-white py-20 md:py-32 overflow-hidden mb-12">
+            {toko.header_bg ? (
+                <div className="absolute inset-0 z-0">
+                    <img src={toko.header_bg} className="w-full h-full object-cover opacity-50" alt="Banner" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent"></div>
+                </div>
+            ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-900 opacity-90 z-0"></div>
+            )}
+            
+            <div className="container mx-auto px-4 text-center relative z-10">
+                <span className="inline-block py-1 px-3 rounded-full bg-blue-500/30 border border-blue-400/30 text-blue-200 text-xs font-bold mb-4 backdrop-blur-sm">🚀 Platform Digital No. #1</span>
+                <h1 className="text-4xl md:text-6xl font-black mb-6 tracking-tight leading-tight">
+                    Upgrade Skill dengan <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">Produk Digital Premium</span>
+                </h1>
+                <p className="text-gray-300 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+                    {toko.deskripsi || "Temukan ribuan aset digital, source code, dan e-book berkualitas untuk menunjang karir dan bisnismu."}
+                </p>
+                
+                <div className="flex flex-wrap justify-center gap-8 md:gap-16 border-t border-white/10 pt-8 mt-8">
+                    <div className="text-center">
+                        <div className="text-2xl md:text-3xl font-black text-white">{stats.members}+</div>
+                        <div className="text-xs text-gray-400 uppercase tracking-widest mt-1">Member Aktif</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="text-2xl md:text-3xl font-black text-white">{stats.products}+</div>
+                        <div className="text-xs text-gray-400 uppercase tracking-widest mt-1">Produk</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="text-2xl md:text-3xl font-black text-white">{stats.downloads}+</div>
+                        <div className="text-xs text-gray-400 uppercase tracking-widest mt-1">Terjual</div>
+                    </div>
+                </div>
             </div>
         </div>
       )}
 
       {/* --- DAFTAR PRODUK --- */}
       <main className="container mx-auto px-4 pb-20">
-        
-        {/* Judul Section */}
         <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                🔥 {keyword ? `Hasil pencarian: "${keyword}"` : 'Produk Terbaru'}
+                🔥 {keyword ? `Mencari: "${keyword}"` : 'Produk Terbaru'}
             </h2>
         </div>
 
-        {/* Grid Produk */}
         {loading ? (
              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {[1,2,3].map(i => <div key={i} className="h-80 bg-gray-200 rounded-2xl animate-pulse"></div>)}
+                {[1,2,3].map(i => <div key={i} className="h-80 bg-gray-200 rounded-3xl animate-pulse"></div>)}
              </div>
         ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {produk.filter(p => p.nama_produk.toLowerCase().includes(keyword.toLowerCase())).map((item) => (
-                    <div key={item.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition duration-300 group overflow-hidden flex flex-col h-full">
-                        
-                        {/* Gambar Produk */}
-                        <div className="h-48 md:h-56 bg-gray-100 relative overflow-hidden">
+                    <div key={item.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300 group overflow-hidden flex flex-col h-full">
+                        <div className="h-56 bg-gray-100 relative overflow-hidden">
                             {item.gambar ? (
                                 <img src={item.gambar} alt={item.nama_produk} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
                             ) : (
                                 <div className="flex items-center justify-center h-full text-4xl">📦</div>
                             )}
-                            {/* Label Hemat */}
                             {item.harga_coret > item.harga && (
-                                <span className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md">
+                                <span className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg">
                                     Hemat {Math.round(((item.harga_coret - item.harga) / item.harga_coret) * 100)}%
                                 </span>
                             )}
                         </div>
 
-                        {/* Info Produk */}
-                        <div className="p-5 flex flex-col flex-grow">
-                            <div className="mb-2">
+                        <div className="p-6 flex flex-col flex-grow">
+                            <div className="mb-3">
                                 <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">{item.kategori || 'Digital'}</span>
                             </div>
-                            <h3 className="font-bold text-lg mb-2 line-clamp-2 text-gray-800 group-hover:text-blue-600 transition">{item.nama_produk}</h3>
+                            <h3 className="font-bold text-xl mb-2 line-clamp-2 text-gray-800 group-hover:text-blue-600 transition">{item.nama_produk}</h3>
                             
-                            <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
+                            <div className="mt-auto pt-5 border-t border-gray-50 flex items-center justify-between">
                                 <div>
                                     {item.harga_coret > item.harga && <p className="text-xs text-gray-400 line-through">Rp {Number(item.harga_coret).toLocaleString('id-ID')}</p>}
-                                    <p className="text-xl font-black text-blue-600">Rp {Number(item.harga).toLocaleString('id-ID')}</p>
+                                    <p className="text-2xl font-black text-blue-600">Rp {Number(item.harga).toLocaleString('id-ID')}</p>
                                 </div>
                                 <Link href={`/produk/${item.id}`} className="bg-gray-100 hover:bg-blue-600 hover:text-white text-gray-600 p-3 rounded-full transition shadow-sm">
                                     ➜
@@ -189,28 +248,82 @@ export default function Home() {
         )}
 
         {!loading && produk.length === 0 && (
-            <div className="text-center py-20">
+            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
                 <p className="text-gray-400">Belum ada produk nih, Bos.</p>
+            </div>
+        )}
+
+        {/* --- TESTIMONI SECTION --- */}
+        {!keyword && (
+            <div className="mt-24">
+                <div className="text-center mb-12">
+                    <h2 className="text-2xl md:text-3xl font-black text-gray-900">Kata Mereka 💬</h2>
+                    <p className="text-gray-500 mt-2">Apa kata customer yang sudah berbelanja di sini?</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {testimoni.map((t, index) => (
+                        <div key={index} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition">
+                            <div className="flex text-yellow-400 mb-4 gap-1">
+                                {[...Array(t.rating)].map((_, i) => <FaStar key={i} />)}
+                            </div>
+                            <p className="text-gray-600 italic mb-6">"{t.text}"</p>
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center font-bold text-gray-500">{t.nama[0]}</div>
+                                <div>
+                                    <h4 className="font-bold text-sm text-gray-900">{t.nama}</h4>
+                                    <p className="text-xs text-gray-400">{t.role}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         )}
       </main>
 
       {/* --- FOOTER --- */}
-      <footer className="bg-white border-t py-10 mt-20">
-         <div className="container mx-auto px-4 text-center">
-            <h3 className="font-bold text-lg mb-2">Loodfie Market</h3>
-            <p className="text-gray-400 text-sm">Platform produk digital terpercaya.</p>
-            <p className="text-gray-300 text-xs mt-8">&copy; {new Date().getFullYear()} All rights reserved.</p>
+      <footer className="bg-white border-t border-gray-200 pt-16 pb-8 mt-12">
+         <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div className="col-span-1 md:col-span-2">
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="bg-blue-600 text-white p-2 rounded-lg font-black text-lg">L</div>
+                        <span className="font-bold text-xl tracking-tight text-gray-900">{toko.nama_toko}</span>
+                    </div>
+                    <p className="text-gray-500 text-sm leading-relaxed max-w-sm">
+                        Platform marketplace digital terpercaya. Jual beli source code, e-book, dan aset kreatif dengan aman dan instan.
+                    </p>
+                </div>
+                <div>
+                    <h4 className="font-bold text-gray-900 mb-4">Menu</h4>
+                    <ul className="space-y-2 text-sm text-gray-500">
+                        <li><Link href="/" className="hover:text-blue-600">Beranda</Link></li>
+                        <li><Link href="/keranjang" className="hover:text-blue-600">Keranjang</Link></li>
+                        <li><Link href="/masuk" className="hover:text-blue-600">Login Member</Link></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 className="font-bold text-gray-900 mb-4">Bantuan</h4>
+                    <ul className="space-y-2 text-sm text-gray-500">
+                        <li><a href="#" className="hover:text-blue-600">Cara Pembelian</a></li>
+                        <li><a href="#" className="hover:text-blue-600">Konfirmasi Pembayaran</a></li>
+                        <li><a href="#" className="hover:text-blue-600">Hubungi Kami</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div className="border-t border-gray-100 pt-8 text-center">
+                <p className="text-gray-400 text-xs">&copy; {new Date().getFullYear()} {toko.nama_toko}. All rights reserved.</p>
+            </div>
          </div>
       </footer>
 
-      {/* Tombol WA Mengambang */}
+      {/* Floating WA */}
       <a 
         href="https://wa.me/6285314445959" 
         target="_blank" 
-        className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-2xl hover:bg-green-600 hover:scale-110 transition z-50 flex items-center justify-center"
+        className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-2xl hover:bg-green-600 hover:scale-110 transition z-50 flex items-center justify-center group"
       >
-        <FaWhatsapp className="text-2xl" />
+        <FaWhatsapp className="text-2xl group-hover:animate-pulse" />
       </a>
     </div>
   );
