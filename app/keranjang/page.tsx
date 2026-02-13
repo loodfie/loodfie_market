@@ -27,24 +27,33 @@ export default function KeranjangPage() {
     const hitung = items.reduce((acc, item) => acc + Number(item.harga), 0);
     setTotal(hitung);
 
-    // 2. Cek Login & Pasang Script Midtrans (PRODUCTION MODE)
+    // 2. Cek Login & Pasang Script Midtrans
     async function init() {
         const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user || null);
+        
+        // --- LOGIKA PENGUSIR TAMU (SECURITY) ---
+        if (!session) {
+            toast.error("🔒 Login dulu Bos kalau mau lihat keranjang!");
+            router.push('/masuk'); // Tendang ke halaman login
+            return;
+        }
+        // ---------------------------------------
+
+        setUser(session.user);
 
         // Cek apakah script sudah ada biar gak dobel
         const scriptId = 'midtrans-script';
         if (!document.getElementById(scriptId)) {
             const script = document.createElement('script');
             script.id = scriptId;
-            // 🔥 URL INI UNTUK PRODUCTION (LIVE)
-            script.src = 'https://app.midtrans.com/snap/snap.js'; 
+            // Script Production Midtrans
+            script.src = process.env.NEXT_PUBLIC_MIDTRANS_API_URL || 'https://app.midtrans.com/snap/snap.js'; 
             script.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '');
             document.body.appendChild(script);
         }
     }
     init();
-  }, [items]);
+  }, [items, router]);
 
   // 🔥 FUNGSI BAYAR (TOMBOL DITEKAN)
   const handlePayment = async () => {
@@ -91,7 +100,7 @@ export default function KeranjangPage() {
             onSuccess: async function(result: any) {
                 toast.success("Pembayaran Berhasil! 🎉");
                 
-                // SIMPAN TRANSAKSI KE DATABASE (Supaya user bisa akses produknya)
+                // SIMPAN TRANSAKSI KE DATABASE
                 for (const item of items) {
                     await supabase.from('transaksi').insert({
                         user_email: user.email,
@@ -108,14 +117,12 @@ export default function KeranjangPage() {
             },
             onPending: function(result: any) {
                 toast("Menunggu pembayaran...", { icon: '⏳' });
-                // Bisa redirect ke halaman riwayat kalau mau
             },
             onError: function(result: any) {
                 toast.error("Pembayaran Gagal/Dibatalkan");
                 setLoading(false);
             },
             onClose: function() {
-                toast("Jendela pembayaran ditutup");
                 setLoading(false);
             }
         });
@@ -147,6 +154,7 @@ export default function KeranjangPage() {
             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
                 <div className="text-6xl mb-4">🛒</div>
                 <h2 className="text-2xl font-bold mb-2">Keranjang Kosong</h2>
+                <p className="text-gray-400 mb-6">Belum ada barang nih, Bos.</p>
                 <Link href="/" className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-blue-700 transition">
                     Mulai Belanja
                 </Link>
