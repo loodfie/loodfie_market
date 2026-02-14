@@ -100,9 +100,9 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
       <Toaster position="top-center" />
 
-      {/* --- NAVBAR (Diperkecil h-20 jadi h-16) --- */}
+      {/* --- NAVBAR (Diperkecil menjadi h-14) --- */}
       <nav className="bg-white sticky top-0 z-50 shadow-sm border-b border-gray-100/50 backdrop-blur-md bg-white/90">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
+        <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2">
             <div className="bg-blue-600 text-white p-1.5 rounded-lg font-black text-lg shadow-blue-500/20 shadow-lg">L</div>
             <span className="font-bold text-lg tracking-tight text-gray-900 hidden md:block">{toko.nama_toko}</span>
@@ -161,9 +161,9 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* --- HERO SECTION (Padding dikurangi biar tidak terlalu tinggi) --- */}
+      {/* --- HERO SECTION (Padding dikurangi) --- */}
       {!keyword && (
-        <div className="relative bg-gray-900 text-white pt-12 pb-8 md:py-20 overflow-hidden mb-8">
+        <div className="relative bg-gray-900 text-white pt-10 pb-6 md:py-16 overflow-hidden mb-8">
             {/* Background Header Dinamis */}
             {toko.header_bg ? (
                 <div className="absolute inset-0 z-0">
@@ -183,7 +183,7 @@ export default function Home() {
                     {toko.deskripsi || "Temukan ribuan aset digital, source code, dan e-book berkualitas untuk menunjang karir dan bisnismu."}
                 </p>
                 
-                {/* Stats (Gap diperkecil) */}
+                {/* Stats */}
                 <div className="flex flex-wrap justify-center gap-6 md:gap-12 border-t border-white/10 pt-6 mt-6">
                     <div className="text-center">
                         <div className="text-xl md:text-2xl font-black text-white">{stats.members}+</div>
@@ -227,8 +227,8 @@ export default function Home() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {produk.filter(p => p.nama_produk.toLowerCase().includes(keyword.toLowerCase())).map((item) => (
                     <div key={item.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 group overflow-hidden flex flex-col h-full">
-                        {/* Gambar diperkecil tingginya jadi h-44 */}
-                        <div className="h-44 bg-gray-100 relative overflow-hidden">
+                        {/* GAMBAR TETAP h-32 */}
+                        <div className="h-32 bg-gray-100 relative overflow-hidden">
                             {item.gambar ? (
                                 <img src={item.gambar} alt={item.nama_produk} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
                             ) : (
@@ -241,7 +241,6 @@ export default function Home() {
                             )}
                         </div>
 
-                        {/* Padding konten diperkecil jadi p-4 */}
                         <div className="p-4 flex flex-col flex-grow">
                             <div className="mb-2">
                                 <span className="bg-blue-50 text-blue-600 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">{item.kategori || 'Digital'}</span>
@@ -297,9 +296,9 @@ export default function Home() {
         )}
       </main>
 
-      {/* --- FOOTER (Padding dikurangi) --- */}
+      {/* --- FOOTER (Padding diperkecil) --- */}
       <footer 
-        className="border-t border-gray-200 pt-10 pb-6 mt-10 bg-white"
+        className="border-t border-gray-200 pt-6 pb-4 mt-8 bg-white"
         style={{ 
             backgroundImage: toko.footer_bg ? `url(${toko.footer_bg})` : 'none',
             backgroundSize: 'cover',
@@ -307,11 +306,11 @@ export default function Home() {
             backgroundColor: toko.footer_bg ? 'transparent' : 'white'
         }}
       >
-        <div className={toko.footer_bg ? "bg-white/90 p-6 rounded-xl backdrop-blur-sm" : ""}>
+        <div className={toko.footer_bg ? "bg-white/90 p-4 rounded-xl backdrop-blur-sm" : ""}>
              <div className="container mx-auto px-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                     <div className="col-span-1 md:col-span-2">
-                        <div className="flex items-center gap-2 mb-3">
+                        <div className="flex items-center gap-2 mb-2">
                             <div className="bg-blue-600 text-white p-1.5 rounded-lg font-black text-base">L</div>
                             <span className="font-bold text-lg tracking-tight text-gray-900">{toko.nama_toko}</span>
                         </div>
@@ -320,16 +319,16 @@ export default function Home() {
                         </p>
                     </div>
                     <div>
-                        <h4 className="font-bold text-gray-900 mb-3 text-sm">Menu</h4>
-                        <ul className="space-y-1.5 text-xs text-gray-500">
+                        <h4 className="font-bold text-gray-900 mb-2 text-sm">Menu</h4>
+                        <ul className="space-y-1 text-xs text-gray-500">
                             <li><Link href="/" className="hover:text-blue-600">Beranda</Link></li>
                             <li><Link href="/keranjang" className="hover:text-blue-600">Keranjang</Link></li>
                             <li><Link href="/masuk" className="hover:text-blue-600">Login Member</Link></li>
                         </ul>
                     </div>
                     <div>
-                        <h4 className="font-bold text-gray-900 mb-3 text-sm">Bantuan</h4>
-                        <ul className="space-y-1.5 text-xs text-gray-500">
+                        <h4 className="font-bold text-gray-900 mb-2 text-sm">Bantuan</h4>
+                        <ul className="space-y-1 text-xs text-gray-500">
                             <li><Link href="/cara-pembelian" className="hover:text-blue-600">Cara Pembelian</Link></li>
                             <li><Link href="/konfirmasi" className="hover:text-blue-600">Konfirmasi Pembayaran</Link></li>
                             <li><Link href="/faq" className="hover:text-blue-600">FAQ</Link></li>
@@ -347,7 +346,7 @@ export default function Home() {
                         </ul>
                     </div>
                 </div>
-                <div className="border-t border-gray-100 pt-6 text-center">
+                <div className="border-t border-gray-100 pt-4 text-center">
                     <p className="text-gray-400 text-[10px]">&copy; {new Date().getFullYear()} {toko.nama_toko}. All rights reserved.</p>
                 </div>
              </div>
