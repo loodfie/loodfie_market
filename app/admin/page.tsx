@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
-import { FaArrowLeft, FaTrash, FaStore, FaMoneyBillWave, FaPalette, FaCommentDots, FaUpload } from 'react-icons/fa';
+import { FaArrowLeft, FaTrash, FaStore, FaMoneyBillWave, FaPalette, FaCommentDots, FaUpload, FaLock } from 'react-icons/fa';
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(true);
@@ -52,15 +52,26 @@ export default function AdminPage() {
   const [textTesti, setTextTesti] = useState('');
   const [avatarTesti, setAvatarTesti] = useState('😎');
 
+  // --- 🔥 SISTEM PENGUSIR TAMU (SECURITY CHECK) 🔥 ---
   useEffect(() => {
     async function initAdmin() {
       const { data: { session } } = await supabase.auth.getSession();
+      
+      // EMAIL BOS (Satu-satunya yang boleh masuk)
       const emailBos = "pordjox75@gmail.com"; 
+
+      // Cek apakah login & apakah emailnya cocok
       if (!session || session.user.email !== emailBos) {
-        toast.error("⛔ Akses Ditolak!");
-        router.push('/');
+        toast.error("⛔ AREA TERLARANG! Kamu bukan Admin.", {
+            duration: 4000,
+            icon: '👮‍♂️'
+        });
+        // Gunakan replace agar tidak bisa di-back
+        router.replace('/'); 
         return;
       }
+
+      // Jika lolos, selamat datang Bos!
       setIsAdmin(true);
       ambilDaftarProduk();
       ambilRiwayatTransaksi();
@@ -69,7 +80,7 @@ export default function AdminPage() {
       setLoading(false);
     }
     initAdmin();
-  }, []);
+  }, [router]);
 
   async function ambilDaftarProduk() { const { data } = await supabase.from('produk').select('*').order('id', { ascending: false }); if (data) setDaftarProduk(data); }
   async function ambilDataToko() { const { data } = await supabase.from('toko').select('*').single(); if (data) setToko(data); }
@@ -97,7 +108,7 @@ export default function AdminPage() {
   const handleBeriAkses = async (e: React.FormEvent) => { e.preventDefault(); setLoadingTrx(true); const toastId = toast.loading("Memproses..."); try { await supabase.from('transaksi').insert([{ user_email: emailPembeli, produk_id: Number(produkDipilih), status: 'LUNAS' }]); toast.success("Akses Diberikan!", { id: toastId }); setEmailPembeli(''); setProdukDipilih(''); ambilRiwayatTransaksi(); } catch (err: any) { toast.error(err.message, { id: toastId }); } finally { setLoadingTrx(false); } };
   const handleCabutAkses = async (id: number) => { if (confirm("Cabut akses?")) { await supabase.from('transaksi').delete().eq('id', id); toast.success("Dicabut"); ambilRiwayatTransaksi(); }};
 
-  // --- 🔥 LOGIKA TAMPILAN (DIPERBARUI DENGAN PESAN LOGIN) ---
+  // --- LOGIKA TAMPILAN ---
   const handleUpdateTampilan = async (e: React.FormEvent) => {
     e.preventDefault(); setSavingTema(true); const toastId = toast.loading("Menyimpan...");
     try {
@@ -112,7 +123,7 @@ export default function AdminPage() {
             header_bg: urlHeader, footer_bg: urlFooter, running_text: toko.running_text, 
             popup_image: urlPopup, logo: urlLogo, 
             total_member: toko.total_member, total_terjual: toko.total_terjual, kepuasan: toko.kepuasan,
-            pesan_login: toko.pesan_login // 🔥 Simpan Pesan Login
+            pesan_login: toko.pesan_login
         };
         
         if (!toko.id) { await supabase.from('toko').insert([payload]); } else { await supabase.from('toko').update(payload).eq('id', toko.id); }
@@ -148,7 +159,7 @@ export default function AdminPage() {
   const handleHapusTesti = async (id: number) => { await supabase.from('testimoni').delete().eq('id', id); ambilDaftarTesti(); };
   const handleEditTesti = (t: any) => { setIdTesti(t.id); setNamaTesti(t.nama); setRoleTesti(t.role); setTextTesti(t.text); setAvatarTesti(t.avatar); };
 
-  if (loading) return <div className="flex h-screen items-center justify-center bg-gray-50"><p className="animate-pulse font-bold text-gray-400">Memuat Admin...</p></div>;
+  if (loading) return <div className="flex h-screen items-center justify-center bg-gray-50"><p className="animate-pulse font-bold text-gray-400">Memeriksa Keamanan...</p></div>;
   if (!isAdmin) return null;
 
   return (
@@ -163,8 +174,8 @@ export default function AdminPage() {
                     <FaArrowLeft /> Kembali ke Toko
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-black text-gray-800">Admin Panel</h1>
-                    <p className="text-xs text-gray-500">Kelola toko digitalmu di sini</p>
+                    <h1 className="text-2xl font-black text-gray-800 flex items-center gap-2"><FaLock className="text-blue-600 text-lg" /> Admin Panel</h1>
+                    <p className="text-xs text-gray-500">Mode Super Admin: Aktif</p>
                 </div>
             </div>
             
@@ -289,7 +300,7 @@ export default function AdminPage() {
                         </div>
                     </div>
 
-                    {/* 🔥 2. DATA STATISTIK + PESAN LOGIN BARU */}
+                    {/* 2. DATA STATISTIK + PESAN LOGIN */}
                     <div className="bg-blue-50 p-6 rounded-2xl border border-blue-200">
                         <label className="block text-sm font-bold text-blue-800 mb-4">📊 Data & Pesan Sistem</label>
                         <div className="grid grid-cols-3 gap-4 mb-4">
@@ -307,7 +318,7 @@ export default function AdminPage() {
                             </div>
                         </div>
                         
-                        {/* 🔥 INPUT PESAN LOGIN POPUP */}
+                        {/* INPUT PESAN LOGIN POPUP */}
                         <div>
                             <label className="text-xs font-bold text-blue-700 mb-1 block">🔒 Pesan Popup Login (Wajib Login)</label>
                             <input 
