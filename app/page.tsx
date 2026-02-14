@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-// PERBAIKAN FINAL: FaWhatsapp (W besar) dan FaCog (Icon Admin Standar)
 import { FaShoppingCart, FaWhatsapp, FaSearch, FaUser, FaSignOutAlt, FaStar, FaUsers, FaDownload, FaCheckCircle, FaCog } from 'react-icons/fa'; 
 import { useCart } from '@/context/CartContext';
 import toast, { Toaster } from 'react-hot-toast';
@@ -13,13 +12,17 @@ export default function Home() {
   const [produk, setProduk] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false); // Status Admin
+  const [isAdmin, setIsAdmin] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [stats, setStats] = useState({ members: 120, downloads: 450, products: 0 });
+  
+  // State Toko (Termasuk Footer & Header BG)
   const [toko, setToko] = useState<any>({
     nama_toko: 'Loodfie Market',
     header_bg: null,
-    deskripsi: 'Pusat Produk Digital Terbaik & Terpercaya'
+    footer_bg: null, // Tambahan untuk Footer
+    deskripsi: 'Pusat Produk Digital Terbaik & Terpercaya',
+    running_text: 'Selamat Datang di Loodfie Market! Dapatkan diskon spesial untuk produk digital pilihan.' // Default Running Text
   });
   
   const { items } = useCart(); 
@@ -39,8 +42,7 @@ export default function Home() {
       const currentUser = session?.user || null;
       setUser(currentUser);
 
-      // 2. Cek Apakah User Adalah Admin?
-      // Pastikan email ini SAMA PERSIS dengan email login Bos di .env.local
+      // 2. Cek Admin
       if (currentUser && currentUser.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
         setIsAdmin(true);
       } else {
@@ -58,7 +60,7 @@ export default function Home() {
         setStats(prev => ({ ...prev, products: dataProduk.length }));
       }
 
-      // 4. Ambil Info Toko
+      // 4. Ambil Info Toko (Header, Footer, Running Text)
       const { data: dataToko } = await supabase.from('toko').select('*').single();
       if (dataToko) setToko(dataToko);
 
@@ -83,7 +85,6 @@ export default function Home() {
     window.location.reload(); 
   };
 
-  // Logika Satpam Keranjang
   const handleCartClick = (e: any) => {
     if (!user) {
       e.preventDefault(); 
@@ -119,14 +120,14 @@ export default function Home() {
 
           <div className="flex items-center gap-3 md:gap-4">
             
-            {/* 🔥 TOMBOL ADMIN (HANYA MUNCUL JIKA ADMIN LOGIN) 🔥 */}
+            {/* Tombol Admin */}
             {isAdmin && (
                 <Link href="/admin" className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-black transition flex items-center gap-2 shadow-lg">
                     <FaCog /> Admin Panel
                 </Link>
             )}
 
-            {/* KERANJANG */}
+            {/* Keranjang */}
             <Link 
                 href={user ? "/keranjang" : "#"} 
                 onClick={handleCartClick}
@@ -162,7 +163,8 @@ export default function Home() {
 
       {/* --- HERO SECTION --- */}
       {!keyword && (
-        <div className="relative bg-gray-900 text-white py-20 md:py-32 overflow-hidden mb-12">
+        <div className="relative bg-gray-900 text-white pt-20 pb-10 md:py-32 overflow-hidden mb-12">
+            {/* Background Header Dinamis */}
             {toko.header_bg ? (
                 <div className="absolute inset-0 z-0">
                     <img src={toko.header_bg} className="w-full h-full object-cover opacity-50" alt="Banner" />
@@ -181,6 +183,7 @@ export default function Home() {
                     {toko.deskripsi || "Temukan ribuan aset digital, source code, dan e-book berkualitas untuk menunjang karir dan bisnismu."}
                 </p>
                 
+                {/* Stats */}
                 <div className="flex flex-wrap justify-center gap-8 md:gap-16 border-t border-white/10 pt-8 mt-8">
                     <div className="text-center">
                         <div className="text-2xl md:text-3xl font-black text-white">{stats.members}+</div>
@@ -194,6 +197,16 @@ export default function Home() {
                         <div className="text-2xl md:text-3xl font-black text-white">{stats.downloads}+</div>
                         <div className="text-xs text-gray-400 uppercase tracking-widest mt-1">Terjual</div>
                     </div>
+                </div>
+
+                {/* 🔥 RUNNING TEXT (FITUR YANG DIKEMBALIKAN) 🔥 */}
+                <div className="mt-10 w-full overflow-hidden bg-black/30 backdrop-blur-sm border-y border-white/10 py-2">
+                    {/* Menggunakan tag marquee agar simpel dan langsung jalan */}
+                    {/* @ts-ignore */} 
+                    <marquee scrollamount="6" className="text-white text-sm font-medium tracking-wide">
+                         📢 {toko.running_text || "Selamat Datang di Loodfie Market! Pusat Produk Digital Terlengkap & Terpercaya. | 🚀 Diskon Spesial untuk Member Baru! | 📲 Butuh Bantuan? Chat WhatsApp Admin 085314445959"}
+                    {/* @ts-ignore */}
+                    </marquee>
                 </div>
             </div>
         </div>
@@ -284,39 +297,64 @@ export default function Home() {
       </main>
 
       {/* --- FOOTER --- */}
-      <footer className="bg-white border-t border-gray-200 pt-16 pb-8 mt-12">
-         <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-                <div className="col-span-1 md:col-span-2">
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="bg-blue-600 text-white p-2 rounded-lg font-black text-lg">L</div>
-                        <span className="font-bold text-xl tracking-tight text-gray-900">{toko.nama_toko}</span>
+      <footer 
+        className="border-t border-gray-200 pt-16 pb-8 mt-12 bg-white"
+        style={{ 
+            // 🔥 Background Footer Dinamis: Menggunakan Gambar dari Database jika ada
+            backgroundImage: toko.footer_bg ? `url(${toko.footer_bg})` : 'none',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundColor: toko.footer_bg ? 'transparent' : 'white'
+        }}
+      >
+        {/* Layer Gelap (Overlay) supaya tulisan terbaca jika pakai background gambar */}
+        <div className={toko.footer_bg ? "bg-white/90 p-8 rounded-xl backdrop-blur-sm" : ""}>
+             <div className="container mx-auto px-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                    <div className="col-span-1 md:col-span-2">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="bg-blue-600 text-white p-2 rounded-lg font-black text-lg">L</div>
+                            <span className="font-bold text-xl tracking-tight text-gray-900">{toko.nama_toko}</span>
+                        </div>
+                        <p className="text-gray-500 text-sm leading-relaxed max-w-sm">
+                            Platform marketplace digital terpercaya. Jual beli source code, e-book, dan aset kreatif dengan aman dan instan.
+                        </p>
                     </div>
-                    <p className="text-gray-500 text-sm leading-relaxed max-w-sm">
-                        Platform marketplace digital terpercaya. Jual beli source code, e-book, dan aset kreatif dengan aman dan instan.
-                    </p>
+                    <div>
+                        <h4 className="font-bold text-gray-900 mb-4">Menu</h4>
+                        <ul className="space-y-2 text-sm text-gray-500">
+                            <li><Link href="/" className="hover:text-blue-600">Beranda</Link></li>
+                            <li><Link href="/keranjang" className="hover:text-blue-600">Keranjang</Link></li>
+                            <li><Link href="/masuk" className="hover:text-blue-600">Login Member</Link></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-gray-900 mb-4">Bantuan</h4>
+                        <ul className="space-y-2 text-sm text-gray-500">
+                            <li><Link href="#" className="hover:text-blue-600">Cara Pembelian</Link></li>
+                            <li><Link href="#" className="hover:text-blue-600">Konfirmasi Pembayaran</Link></li>
+                            
+                            {/* FAQ Ditambahkan */}
+                            <li><Link href="/faq" className="hover:text-blue-600">FAQ</Link></li> 
+                            
+                            {/* Link WA Langsung */}
+                            <li>
+                                <a 
+                                    href="https://wa.me/6285314445959" 
+                                    target="_blank" 
+                                    className="hover:text-blue-600 font-bold flex items-center gap-1"
+                                >
+                                    Hubungi Kami (WhatsApp)
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-                <div>
-                    <h4 className="font-bold text-gray-900 mb-4">Menu</h4>
-                    <ul className="space-y-2 text-sm text-gray-500">
-                        <li><Link href="/" className="hover:text-blue-600">Beranda</Link></li>
-                        <li><Link href="/keranjang" className="hover:text-blue-600">Keranjang</Link></li>
-                        <li><Link href="/masuk" className="hover:text-blue-600">Login Member</Link></li>
-                    </ul>
+                <div className="border-t border-gray-100 pt-8 text-center">
+                    <p className="text-gray-400 text-xs">&copy; {new Date().getFullYear()} {toko.nama_toko}. All rights reserved.</p>
                 </div>
-                <div>
-                    <h4 className="font-bold text-gray-900 mb-4">Bantuan</h4>
-                    <ul className="space-y-2 text-sm text-gray-500">
-                        <li><a href="#" className="hover:text-blue-600">Cara Pembelian</a></li>
-                        <li><a href="#" className="hover:text-blue-600">Konfirmasi Pembayaran</a></li>
-                        <li><a href="#" className="hover:text-blue-600">Hubungi Kami</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div className="border-t border-gray-100 pt-8 text-center">
-                <p className="text-gray-400 text-xs">&copy; {new Date().getFullYear()} {toko.nama_toko}. All rights reserved.</p>
-            </div>
-         </div>
+             </div>
+        </div>
       </footer>
 
       {/* Floating WA */}
