@@ -16,13 +16,13 @@ export default function Home() {
   const [keyword, setKeyword] = useState('');
   const [stats, setStats] = useState({ members: 120, downloads: 450, products: 0 });
   
-  // State Toko (Termasuk Footer & Header BG)
+  // State Toko (Tetap mempertahankan fitur dynamic background & running text)
   const [toko, setToko] = useState<any>({
     nama_toko: 'Loodfie Market',
     header_bg: null,
-    footer_bg: null, // Tambahan untuk Footer
+    footer_bg: null,
     deskripsi: 'Pusat Produk Digital Terbaik & Terpercaya',
-    running_text: 'Selamat Datang di Loodfie Market! Dapatkan diskon spesial untuk produk digital pilihan.' // Default Running Text
+    running_text: 'Selamat Datang di Loodfie Market! Dapatkan diskon spesial untuk produk digital pilihan.'
   });
   
   const { items } = useCart(); 
@@ -60,7 +60,7 @@ export default function Home() {
         setStats(prev => ({ ...prev, products: dataProduk.length }));
       }
 
-      // 4. Ambil Info Toko (Header, Footer, Running Text)
+      // 4. Ambil Info Toko
       const { data: dataToko } = await supabase.from('toko').select('*').single();
       if (dataToko) setToko(dataToko);
 
@@ -100,30 +100,30 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
       <Toaster position="top-center" />
 
-      {/* --- NAVBAR --- */}
+      {/* --- NAVBAR (Diperkecil h-20 jadi h-16) --- */}
       <nav className="bg-white sticky top-0 z-50 shadow-sm border-b border-gray-100/50 backdrop-blur-md bg-white/90">
-        <div className="container mx-auto px-4 h-20 flex items-center justify-between gap-4">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="bg-blue-600 text-white p-2 rounded-xl font-black text-xl shadow-blue-500/20 shadow-lg">L</div>
-            <span className="font-bold text-xl tracking-tight text-gray-900 hidden md:block">{toko.nama_toko}</span>
+            <div className="bg-blue-600 text-white p-1.5 rounded-lg font-black text-lg shadow-blue-500/20 shadow-lg">L</div>
+            <span className="font-bold text-lg tracking-tight text-gray-900 hidden md:block">{toko.nama_toko}</span>
           </Link>
 
-          <div className="flex-1 max-w-md hidden md:flex relative">
+          <div className="flex-1 max-w-sm hidden md:flex relative">
              <input 
                type="text" 
                placeholder="Cari aset digital..." 
-               className="w-full bg-gray-100 border-none rounded-full py-3 px-5 pl-12 focus:ring-2 focus:ring-blue-500 transition outline-none text-sm"
+               className="w-full bg-gray-100 border-none rounded-full py-2 px-4 pl-10 focus:ring-2 focus:ring-blue-500 transition outline-none text-sm"
                onChange={(e) => setKeyword(e.target.value)}
              />
-             <FaSearch className="absolute left-4 top-3.5 text-gray-400" />
+             <FaSearch className="absolute left-3.5 top-2.5 text-gray-400 text-sm" />
           </div>
 
-          <div className="flex items-center gap-3 md:gap-4">
+          <div className="flex items-center gap-2 md:gap-3">
             
             {/* Tombol Admin */}
             {isAdmin && (
-                <Link href="/admin" className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-black transition flex items-center gap-2 shadow-lg">
-                    <FaCog /> Admin Panel
+                <Link href="/admin" className="bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-black transition flex items-center gap-2 shadow-lg">
+                    <FaCog /> Admin
                 </Link>
             )}
 
@@ -131,11 +131,11 @@ export default function Home() {
             <Link 
                 href={user ? "/keranjang" : "#"} 
                 onClick={handleCartClick}
-                className="relative p-3 rounded-full hover:bg-gray-100 transition group"
+                className="relative p-2 rounded-full hover:bg-gray-100 transition group"
             >
-                <FaShoppingCart className={`text-xl ${user ? 'text-gray-700 group-hover:text-blue-600' : 'text-gray-300'}`} />
+                <FaShoppingCart className={`text-lg ${user ? 'text-gray-700 group-hover:text-blue-600' : 'text-gray-300'}`} />
                 {user && items.length > 0 && (
-                    <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold border-2 border-white animate-bounce">
+                    <span className="absolute top-0 right-0 bg-red-500 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full font-bold border-2 border-white animate-bounce">
                         {items.length}
                     </span>
                 )}
@@ -144,26 +144,26 @@ export default function Home() {
             {user ? (
                 <div className="flex items-center gap-3">
                     <Link href="/dashboard" className="hidden md:flex flex-col items-end">
-                        <span className="text-xs text-gray-500">Halo, Sultan</span>
-                        <span className="font-bold text-sm text-gray-900 truncate max-w-[100px]">{user.email.split('@')[0]}</span>
+                        <span className="text-[10px] text-gray-500">Halo, Sultan</span>
+                        <span className="font-bold text-xs text-gray-900 truncate max-w-[80px]">{user.email.split('@')[0]}</span>
                     </Link>
-                    <button onClick={handleLogout} className="bg-red-50 text-red-500 p-3 rounded-full hover:bg-red-100 transition" title="Logout">
-                        <FaSignOutAlt />
+                    <button onClick={handleLogout} className="bg-red-50 text-red-500 p-2 rounded-full hover:bg-red-100 transition" title="Logout">
+                        <FaSignOutAlt className="text-sm"/>
                     </button>
                 </div>
             ) : (
                 <div className="flex gap-2">
-                    <Link href="/masuk" className="px-5 py-2.5 text-sm font-bold text-gray-600 hover:text-blue-600 transition">Masuk</Link>
-                    <Link href="/daftar" className="px-5 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-full hover:bg-blue-700 shadow-lg hover:shadow-blue-500/30 transition">Daftar</Link>
+                    <Link href="/masuk" className="px-4 py-2 text-xs font-bold text-gray-600 hover:text-blue-600 transition">Masuk</Link>
+                    <Link href="/daftar" className="px-4 py-2 text-xs font-bold bg-blue-600 text-white rounded-full hover:bg-blue-700 shadow-lg hover:shadow-blue-500/30 transition">Daftar</Link>
                 </div>
             )}
           </div>
         </div>
       </nav>
 
-      {/* --- HERO SECTION --- */}
+      {/* --- HERO SECTION (Padding dikurangi biar tidak terlalu tinggi) --- */}
       {!keyword && (
-        <div className="relative bg-gray-900 text-white pt-20 pb-10 md:py-32 overflow-hidden mb-12">
+        <div className="relative bg-gray-900 text-white pt-12 pb-8 md:py-20 overflow-hidden mb-8">
             {/* Background Header Dinamis */}
             {toko.header_bg ? (
                 <div className="absolute inset-0 z-0">
@@ -175,35 +175,34 @@ export default function Home() {
             )}
             
             <div className="container mx-auto px-4 text-center relative z-10">
-                <span className="inline-block py-1 px-3 rounded-full bg-blue-500/30 border border-blue-400/30 text-blue-200 text-xs font-bold mb-4 backdrop-blur-sm">🚀 Platform Digital No. #1</span>
-                <h1 className="text-4xl md:text-6xl font-black mb-6 tracking-tight leading-tight">
+                <span className="inline-block py-1 px-3 rounded-full bg-blue-500/30 border border-blue-400/30 text-blue-200 text-[10px] font-bold mb-3 backdrop-blur-sm">🚀 Platform Digital No. #1</span>
+                <h1 className="text-3xl md:text-5xl font-black mb-4 tracking-tight leading-tight">
                     Upgrade Skill dengan <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">Produk Digital Premium</span>
                 </h1>
-                <p className="text-gray-300 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+                <p className="text-gray-300 text-sm md:text-base max-w-xl mx-auto mb-8 leading-relaxed">
                     {toko.deskripsi || "Temukan ribuan aset digital, source code, dan e-book berkualitas untuk menunjang karir dan bisnismu."}
                 </p>
                 
-                {/* Stats */}
-                <div className="flex flex-wrap justify-center gap-8 md:gap-16 border-t border-white/10 pt-8 mt-8">
+                {/* Stats (Gap diperkecil) */}
+                <div className="flex flex-wrap justify-center gap-6 md:gap-12 border-t border-white/10 pt-6 mt-6">
                     <div className="text-center">
-                        <div className="text-2xl md:text-3xl font-black text-white">{stats.members}+</div>
-                        <div className="text-xs text-gray-400 uppercase tracking-widest mt-1">Member Aktif</div>
+                        <div className="text-xl md:text-2xl font-black text-white">{stats.members}+</div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Member</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl md:text-3xl font-black text-white">{stats.products}+</div>
-                        <div className="text-xs text-gray-400 uppercase tracking-widest mt-1">Produk</div>
+                        <div className="text-xl md:text-2xl font-black text-white">{stats.products}+</div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Produk</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl md:text-3xl font-black text-white">{stats.downloads}+</div>
-                        <div className="text-xs text-gray-400 uppercase tracking-widest mt-1">Terjual</div>
+                        <div className="text-xl md:text-2xl font-black text-white">{stats.downloads}+</div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Terjual</div>
                     </div>
                 </div>
 
-                {/* 🔥 RUNNING TEXT (FITUR YANG DIKEMBALIKAN) 🔥 */}
-                <div className="mt-10 w-full overflow-hidden bg-black/30 backdrop-blur-sm border-y border-white/10 py-2">
-                    {/* Menggunakan tag marquee agar simpel dan langsung jalan */}
+                {/* 🔥 RUNNING TEXT (Tetap Ada) 🔥 */}
+                <div className="mt-8 w-full overflow-hidden bg-black/30 backdrop-blur-sm border-y border-white/10 py-1.5">
                     {/* @ts-ignore */} 
-                    <marquee scrollamount="6" className="text-white text-sm font-medium tracking-wide">
+                    <marquee scrollamount="6" className="text-white text-xs font-medium tracking-wide">
                          📢 {toko.running_text || "Selamat Datang di Loodfie Market! Pusat Produk Digital Terlengkap & Terpercaya. | 🚀 Diskon Spesial untuk Member Baru! | 📲 Butuh Bantuan? Chat WhatsApp Admin 085314445959"}
                     {/* @ts-ignore */}
                     </marquee>
@@ -213,46 +212,48 @@ export default function Home() {
       )}
 
       {/* --- DAFTAR PRODUK --- */}
-      <main className="container mx-auto px-4 pb-20">
-        <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+      <main className="container mx-auto px-4 pb-16">
+        <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 🔥 {keyword ? `Mencari: "${keyword}"` : 'Produk Terbaru'}
             </h2>
         </div>
 
         {loading ? (
-             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {[1,2,3].map(i => <div key={i} className="h-80 bg-gray-200 rounded-3xl animate-pulse"></div>)}
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                {[1,2,3].map(i => <div key={i} className="h-64 bg-gray-200 rounded-2xl animate-pulse"></div>)}
              </div>
         ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {produk.filter(p => p.nama_produk.toLowerCase().includes(keyword.toLowerCase())).map((item) => (
-                    <div key={item.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300 group overflow-hidden flex flex-col h-full">
-                        <div className="h-56 bg-gray-100 relative overflow-hidden">
+                    <div key={item.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 group overflow-hidden flex flex-col h-full">
+                        {/* Gambar diperkecil tingginya jadi h-44 */}
+                        <div className="h-44 bg-gray-100 relative overflow-hidden">
                             {item.gambar ? (
                                 <img src={item.gambar} alt={item.nama_produk} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
                             ) : (
-                                <div className="flex items-center justify-center h-full text-4xl">📦</div>
+                                <div className="flex items-center justify-center h-full text-3xl">📦</div>
                             )}
                             {item.harga_coret > item.harga && (
-                                <span className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg">
+                                <span className="absolute top-3 right-3 bg-red-500 text-white text-[9px] font-bold px-2 py-1 rounded-full shadow-md">
                                     Hemat {Math.round(((item.harga_coret - item.harga) / item.harga_coret) * 100)}%
                                 </span>
                             )}
                         </div>
 
-                        <div className="p-6 flex flex-col flex-grow">
-                            <div className="mb-3">
-                                <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">{item.kategori || 'Digital'}</span>
+                        {/* Padding konten diperkecil jadi p-4 */}
+                        <div className="p-4 flex flex-col flex-grow">
+                            <div className="mb-2">
+                                <span className="bg-blue-50 text-blue-600 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">{item.kategori || 'Digital'}</span>
                             </div>
-                            <h3 className="font-bold text-xl mb-2 line-clamp-2 text-gray-800 group-hover:text-blue-600 transition">{item.nama_produk}</h3>
+                            <h3 className="font-bold text-sm md:text-base mb-2 line-clamp-2 text-gray-800 group-hover:text-blue-600 transition">{item.nama_produk}</h3>
                             
-                            <div className="mt-auto pt-5 border-t border-gray-50 flex items-center justify-between">
+                            <div className="mt-auto pt-3 border-t border-gray-50 flex items-center justify-between">
                                 <div>
-                                    {item.harga_coret > item.harga && <p className="text-xs text-gray-400 line-through">Rp {Number(item.harga_coret).toLocaleString('id-ID')}</p>}
-                                    <p className="text-2xl font-black text-blue-600">Rp {Number(item.harga).toLocaleString('id-ID')}</p>
+                                    {item.harga_coret > item.harga && <p className="text-[10px] text-gray-400 line-through">Rp {Number(item.harga_coret).toLocaleString('id-ID')}</p>}
+                                    <p className="text-lg font-black text-blue-600">Rp {Number(item.harga).toLocaleString('id-ID')}</p>
                                 </div>
-                                <Link href={`/produk/${item.id}`} className="bg-gray-100 hover:bg-blue-600 hover:text-white text-gray-600 p-3 rounded-full transition shadow-sm">
+                                <Link href={`/produk/${item.id}`} className="bg-gray-100 hover:bg-blue-600 hover:text-white text-gray-600 p-2 rounded-full transition shadow-sm text-sm">
                                     ➜
                                 </Link>
                             </div>
@@ -263,30 +264,30 @@ export default function Home() {
         )}
 
         {!loading && produk.length === 0 && (
-            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
-                <p className="text-gray-400">Belum ada produk nih, Bos.</p>
+            <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
+                <p className="text-gray-400 text-sm">Belum ada produk nih, Bos.</p>
             </div>
         )}
 
         {/* --- TESTIMONI SECTION --- */}
         {!keyword && (
-            <div className="mt-24">
-                <div className="text-center mb-12">
-                    <h2 className="text-2xl md:text-3xl font-black text-gray-900">Kata Mereka 💬</h2>
-                    <p className="text-gray-500 mt-2">Apa kata customer yang sudah berbelanja di sini?</p>
+            <div className="mt-16">
+                <div className="text-center mb-8">
+                    <h2 className="text-xl md:text-2xl font-black text-gray-900">Kata Mereka 💬</h2>
+                    <p className="text-gray-500 text-sm mt-1">Apa kata customer yang sudah berbelanja di sini?</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     {testimoni.map((t, index) => (
-                        <div key={index} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition">
-                            <div className="flex text-yellow-400 mb-4 gap-1">
+                        <div key={index} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition">
+                            <div className="flex text-yellow-400 mb-3 gap-1 text-xs">
                                 {[...Array(t.rating)].map((_, i) => <FaStar key={i} />)}
                             </div>
-                            <p className="text-gray-600 italic mb-6">"{t.text}"</p>
+                            <p className="text-gray-600 italic mb-4 text-sm">"{t.text}"</p>
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center font-bold text-gray-500">{t.nama[0]}</div>
+                                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center font-bold text-gray-500 text-xs">{t.nama[0]}</div>
                                 <div>
-                                    <h4 className="font-bold text-sm text-gray-900">{t.nama}</h4>
-                                    <p className="text-xs text-gray-400">{t.role}</p>
+                                    <h4 className="font-bold text-xs text-gray-900">{t.nama}</h4>
+                                    <p className="text-[10px] text-gray-400">{t.role}</p>
                                 </div>
                             </div>
                         </div>
@@ -296,46 +297,42 @@ export default function Home() {
         )}
       </main>
 
-      {/* --- FOOTER --- */}
+      {/* --- FOOTER (Padding dikurangi) --- */}
       <footer 
-        className="border-t border-gray-200 pt-16 pb-8 mt-12 bg-white"
+        className="border-t border-gray-200 pt-10 pb-6 mt-10 bg-white"
         style={{ 
-            // 🔥 Background Footer Dinamis: Menggunakan Gambar dari Database jika ada
             backgroundImage: toko.footer_bg ? `url(${toko.footer_bg})` : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundColor: toko.footer_bg ? 'transparent' : 'white'
         }}
       >
-        {/* Layer Gelap (Overlay) supaya tulisan terbaca jika pakai background gambar */}
-        <div className={toko.footer_bg ? "bg-white/90 p-8 rounded-xl backdrop-blur-sm" : ""}>
+        <div className={toko.footer_bg ? "bg-white/90 p-6 rounded-xl backdrop-blur-sm" : ""}>
              <div className="container mx-auto px-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
                     <div className="col-span-1 md:col-span-2">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="bg-blue-600 text-white p-2 rounded-lg font-black text-lg">L</div>
-                            <span className="font-bold text-xl tracking-tight text-gray-900">{toko.nama_toko}</span>
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="bg-blue-600 text-white p-1.5 rounded-lg font-black text-base">L</div>
+                            <span className="font-bold text-lg tracking-tight text-gray-900">{toko.nama_toko}</span>
                         </div>
-                        <p className="text-gray-500 text-sm leading-relaxed max-w-sm">
+                        <p className="text-gray-500 text-xs leading-relaxed max-w-sm">
                             Platform marketplace digital terpercaya. Jual beli source code, e-book, dan aset kreatif dengan aman dan instan.
                         </p>
                     </div>
                     <div>
-                        <h4 className="font-bold text-gray-900 mb-4">Menu</h4>
-                        <ul className="space-y-2 text-sm text-gray-500">
+                        <h4 className="font-bold text-gray-900 mb-3 text-sm">Menu</h4>
+                        <ul className="space-y-1.5 text-xs text-gray-500">
                             <li><Link href="/" className="hover:text-blue-600">Beranda</Link></li>
                             <li><Link href="/keranjang" className="hover:text-blue-600">Keranjang</Link></li>
                             <li><Link href="/masuk" className="hover:text-blue-600">Login Member</Link></li>
                         </ul>
                     </div>
                     <div>
-                        <h4 className="font-bold text-gray-900 mb-4">Bantuan</h4>
-                        <ul className="space-y-2 text-sm text-gray-500">
-                            <li><Link href="#" className="hover:text-blue-600">Cara Pembelian</Link></li>
-                            <li><Link href="#" className="hover:text-blue-600">Konfirmasi Pembayaran</Link></li>
-                            
-                            {/* FAQ Ditambahkan */}
-                            <li><Link href="/faq" className="hover:text-blue-600">FAQ</Link></li> 
+                        <h4 className="font-bold text-gray-900 mb-3 text-sm">Bantuan</h4>
+                        <ul className="space-y-1.5 text-xs text-gray-500">
+                            <li><Link href="/cara-pembelian" className="hover:text-blue-600">Cara Pembelian</Link></li>
+                            <li><Link href="/konfirmasi" className="hover:text-blue-600">Konfirmasi Pembayaran</Link></li>
+                            <li><Link href="/faq" className="hover:text-blue-600">FAQ</Link></li>
                             
                             {/* Link WA Langsung */}
                             <li>
@@ -350,8 +347,8 @@ export default function Home() {
                         </ul>
                     </div>
                 </div>
-                <div className="border-t border-gray-100 pt-8 text-center">
-                    <p className="text-gray-400 text-xs">&copy; {new Date().getFullYear()} {toko.nama_toko}. All rights reserved.</p>
+                <div className="border-t border-gray-100 pt-6 text-center">
+                    <p className="text-gray-400 text-[10px]">&copy; {new Date().getFullYear()} {toko.nama_toko}. All rights reserved.</p>
                 </div>
              </div>
         </div>
@@ -361,7 +358,7 @@ export default function Home() {
       <a 
         href="https://wa.me/6285314445959" 
         target="_blank" 
-        className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-2xl hover:bg-green-600 hover:scale-110 transition z-50 flex items-center justify-center group"
+        className="fixed bottom-6 right-6 bg-green-500 text-white p-3 rounded-full shadow-2xl hover:bg-green-600 hover:scale-110 transition z-50 flex items-center justify-center group"
       >
         <FaWhatsapp className="text-2xl group-hover:animate-pulse" />
       </a>
