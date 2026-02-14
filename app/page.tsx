@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import Link from 'next/link';
-import { FaShoppingCart, FaWhatsapp, FaSearch, FaUser, FaSignOutAlt, FaStar, FaUsers, FaDownload, FaCheckCircle, FaCog } from 'react-icons/fa'; 
+import Link from 'next/link'; // Kita pakai Link ini sebagai senjata utama
+import { FaShoppingCart, FaWhatsapp, FaSearch, FaUser, FaSignOutAlt, FaStar, FaCog } from 'react-icons/fa'; 
 import { useCart } from '@/context/CartContext';
 import toast, { Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -16,7 +16,6 @@ export default function Home() {
   const [keyword, setKeyword] = useState('');
   const [stats, setStats] = useState({ members: 120, downloads: 450, products: 0 });
   
-  // State Toko (Tetap mempertahankan fitur dynamic background & running text)
   const [toko, setToko] = useState<any>({
     nama_toko: 'Loodfie Market',
     header_bg: null,
@@ -26,7 +25,7 @@ export default function Home() {
   });
   
   const { items } = useCart(); 
-  const router = useRouter();
+  // const router = useRouter(); // router tidak kita butuhkan lagi untuk keranjang
 
   // Data Dummy Testimoni
   const testimoni = [
@@ -37,43 +36,32 @@ export default function Home() {
 
   useEffect(() => {
     async function getData() {
-      // 1. Cek User Session
       const { data: { session } } = await supabase.auth.getSession();
       const currentUser = session?.user || null;
       setUser(currentUser);
 
-      // 2. Cek Admin
       if (currentUser && currentUser.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
         setIsAdmin(true);
       } else {
         setIsAdmin(false);
       }
 
-      // 3. Ambil Data Produk
-      const { data: dataProduk } = await supabase
-        .from('produk')
-        .select('*')
-        .order('id', { ascending: false });
-
+      const { data: dataProduk } = await supabase.from('produk').select('*').order('id', { ascending: false });
       if (dataProduk) {
         setProduk(dataProduk);
         setStats(prev => ({ ...prev, products: dataProduk.length }));
       }
 
-      // 4. Ambil Info Toko
       const { data: dataToko } = await supabase.from('toko').select('*').single();
       if (dataToko) setToko(dataToko);
 
-      // 5. Simulasi Statistik
       setStats(prev => ({ 
         ...prev, 
         members: 150 + Math.floor(Math.random() * 50),
         downloads: 500 + Math.floor(Math.random() * 100) 
       }));
-
       setLoading(false);
     }
-
     getData();
   }, []);
 
@@ -85,22 +73,11 @@ export default function Home() {
     window.location.reload(); 
   };
 
-  const handleCartClick = (e: any) => {
-    if (!user) {
-      e.preventDefault(); 
-      toast.error("🔒 Eits, Login dulu kalau mau lihat keranjang!", {
-        icon: '🔐',
-        style: { borderRadius: '10px', background: '#333', color: '#fff' },
-      });
-      router.push('/masuk');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
       <Toaster position="top-center" />
 
-      {/* --- NAVBAR (Diperkecil menjadi h-14) --- */}
+      {/* --- NAVBAR --- */}
       <nav className="bg-white sticky top-0 z-50 shadow-sm border-b border-gray-100/50 backdrop-blur-md bg-white/90">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2">
@@ -127,10 +104,13 @@ export default function Home() {
                 </Link>
             )}
 
-            {/* Keranjang */}
+            {/* 🔥 PERBAIKAN FINAL TOMBOL KERANJANG 🔥 */}
+            {/* Kita pakai Link murni. Kalau user ada, ke /keranjang. Kalau tidak, ke /masuk. */}
             <Link 
-                href={user ? "/keranjang" : "#"} 
-                onClick={handleCartClick}
+                href={user ? "/keranjang" : "/masuk"}
+                onClick={() => {
+                   if(!user) toast("Silakan Login dulu ya Bos! 🔒", { icon: '🔑' });
+                }}
                 className="relative p-2 rounded-full hover:bg-gray-100 transition group"
             >
                 <FaShoppingCart className={`text-lg ${user ? 'text-gray-700 group-hover:text-blue-600' : 'text-gray-300'}`} />
@@ -161,10 +141,9 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* --- HERO SECTION (Padding dikurangi) --- */}
+      {/* --- HERO SECTION --- */}
       {!keyword && (
         <div className="relative bg-gray-900 text-white pt-10 pb-6 md:py-16 overflow-hidden mb-8">
-            {/* Background Header Dinamis */}
             {toko.header_bg ? (
                 <div className="absolute inset-0 z-0">
                     <img src={toko.header_bg} className="w-full h-full object-cover opacity-50" alt="Banner" />
@@ -199,7 +178,7 @@ export default function Home() {
                     </div>
                 </div>
 
-                {/* 🔥 RUNNING TEXT (Tetap Ada) 🔥 */}
+                {/* Running Text */}
                 <div className="mt-8 w-full overflow-hidden bg-black/30 backdrop-blur-sm border-y border-white/10 py-1.5">
                     {/* @ts-ignore */} 
                     <marquee scrollamount="6" className="text-white text-xs font-medium tracking-wide">
@@ -296,7 +275,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* --- FOOTER (Padding diperkecil) --- */}
+      {/* --- FOOTER --- */}
       <footer 
         className="border-t border-gray-200 pt-6 pb-4 mt-8 bg-white"
         style={{ 
@@ -332,8 +311,6 @@ export default function Home() {
                             <li><Link href="/cara-pembelian" className="hover:text-blue-600">Cara Pembelian</Link></li>
                             <li><Link href="/konfirmasi" className="hover:text-blue-600">Konfirmasi Pembayaran</Link></li>
                             <li><Link href="/faq" className="hover:text-blue-600">FAQ</Link></li>
-                            
-                            {/* Link WA Langsung */}
                             <li>
                                 <a 
                                     href="https://wa.me/6285314445959" 
