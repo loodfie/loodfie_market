@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
-import { SpeedInsights } from "@vercel/speed-insights/next"; // 👈 INI YANG BARU
+// import { SpeedInsights } from "@vercel/speed-insights/next"; <-- HAPUS INI
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Loodfie Market",
-  description: "Pusat Produk Digital Terbaik & Terpercaya",
+  description: "Marketplace Produk Digital Terpercaya",
 };
 
 export default function RootLayout({
@@ -17,12 +17,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
+    <html lang="en">
       <body className={inter.className}>
         <CartProvider>
           {children}
-          {/* Komponen SpeedInsights dipasang di sini supaya memantau kecepatan website */}
-          <SpeedInsights /> 
+          {/* <SpeedInsights />  <-- HAPUS INI JUGA */}
         </CartProvider>
       </body>
     </html>

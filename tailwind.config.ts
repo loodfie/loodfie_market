@@ -13,21 +13,8 @@ const config: Config = {
         "gradient-conic":
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
-      // 🔥 INI DIA BUMBU RAHASIA ANIMASINYA
-      animation: {
-        'marquee': 'marquee 25s linear infinite',
-        'bounce-slow': 'bounce 3s infinite',
-      },
-      keyframes: {
-        marquee: {
-          '0%': { transform: 'translateX(100%)' },
-          '100%': { transform: 'translateX(-100%)' },
-        }
-      }
     },
   },
-  plugins: [
-    require('@tailwindcss/typography'), // Plugin typography (opsional, biar aman)
-  ],
+  plugins: [], // 👈 KITA KOSONGKAN DULU BIAR AMAN
 };
 export default config;
