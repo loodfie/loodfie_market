@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
-import { FaArrowLeft, FaTrash, FaStore, FaMoneyBillWave, FaPalette, FaCommentDots, FaUpload, FaLock } from 'react-icons/fa';
+import { FaArrowLeft, FaTrash, FaStore, FaMoneyBillWave, FaPalette, FaCommentDots, FaLock, FaEnvelope, FaUpload } from 'react-icons/fa';
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(true);
@@ -14,7 +14,7 @@ export default function AdminPage() {
   
   const [activeTab, setActiveTab] = useState<'produk' | 'transaksi' | 'tampilan' | 'testimoni'>('produk');
 
-  // STATE PRODUK
+  // --- STATE PRODUK ---
   const [idProduk, setIdProduk] = useState<number | null>(null);
   const [nama, setNama] = useState('');
   const [harga, setHarga] = useState('');
@@ -30,13 +30,13 @@ export default function AdminPage() {
   const [uploading, setUploading] = useState(false);
   const [daftarProduk, setDaftarProduk] = useState<any[]>([]);
 
-  // STATE TRANSAKSI
+  // --- STATE TRANSAKSI ---
   const [emailPembeli, setEmailPembeli] = useState('');
   const [produkDipilih, setProdukDipilih] = useState<string>('');
   const [riwayatTransaksi, setRiwayatTransaksi] = useState<any[]>([]);
   const [loadingTrx, setLoadingTrx] = useState(false);
 
-  // STATE TAMPILAN
+  // --- STATE TAMPILAN (KEMBALI) ---
   const [toko, setToko] = useState<any>({});
   const [fileHeader, setFileHeader] = useState<File | null>(null);
   const [fileFooter, setFileFooter] = useState<File | null>(null);
@@ -44,7 +44,7 @@ export default function AdminPage() {
   const [fileLogo, setFileLogo] = useState<File | null>(null);
   const [savingTema, setSavingTema] = useState(false);
 
-  // STATE TESTIMONI
+  // --- STATE TESTIMONI (KEMBALI) ---
   const [daftarTesti, setDaftarTesti] = useState<any[]>([]);
   const [idTesti, setIdTesti] = useState<number | null>(null);
   const [namaTesti, setNamaTesti] = useState('');
@@ -52,26 +52,18 @@ export default function AdminPage() {
   const [textTesti, setTextTesti] = useState('');
   const [avatarTesti, setAvatarTesti] = useState('😎');
 
-  // --- 🔥 SISTEM PENGUSIR TAMU (SECURITY CHECK) 🔥 ---
+  // --- INIT DATA ---
   useEffect(() => {
     async function initAdmin() {
       const { data: { session } } = await supabase.auth.getSession();
-      
-      // EMAIL BOS (Satu-satunya yang boleh masuk)
       const emailBos = "pordjox75@gmail.com"; 
-
-      // Cek apakah login & apakah emailnya cocok
+      
       if (!session || session.user.email !== emailBos) {
-        toast.error("⛔ AREA TERLARANG! Kamu bukan Admin.", {
-            duration: 4000,
-            icon: '👮‍♂️'
-        });
-        // Gunakan replace agar tidak bisa di-back
+        toast.error("⛔ AREA TERLARANG!");
         router.replace('/'); 
         return;
       }
 
-      // Jika lolos, selamat datang Bos!
       setIsAdmin(true);
       ambilDaftarProduk();
       ambilRiwayatTransaksi();
@@ -104,11 +96,45 @@ export default function AdminPage() {
   const handleBatalEdit = () => { setIdProduk(null); setNama(''); setHarga(''); setDeskripsi(''); setFileGambar(null); setFileProduk(null); setLinkFileManual(''); };
   const handleHapusProduk = async (id: number) => { if(confirm("Hapus?")) { await supabase.from('produk').delete().eq('id', id); ambilDaftarProduk(); }};
 
-  // --- LOGIKA TRANSAKSI ---
-  const handleBeriAkses = async (e: React.FormEvent) => { e.preventDefault(); setLoadingTrx(true); const toastId = toast.loading("Memproses..."); try { await supabase.from('transaksi').insert([{ user_email: emailPembeli, produk_id: Number(produkDipilih), status: 'LUNAS' }]); toast.success("Akses Diberikan!", { id: toastId }); setEmailPembeli(''); setProdukDipilih(''); ambilRiwayatTransaksi(); } catch (err: any) { toast.error(err.message, { id: toastId }); } finally { setLoadingTrx(false); } };
+  // --- LOGIKA TRANSAKSI (KASIR + AUTO EMAIL) ---
+  const handleBeriAkses = async (e: React.FormEvent) => { 
+      e.preventDefault(); 
+      setLoadingTrx(true); 
+      const toastId = toast.loading("Memberikan Akses..."); 
+      
+      try { 
+          // 1. Masukkan ke Database
+          await supabase.from('transaksi').insert([{ 
+              user_email: emailPembeli, 
+              produk_id: Number(produkDipilih), 
+              status: 'LUNAS' 
+          }]); 
+
+          // 2. Ambil Info Produk untuk Email
+          const infoProduk = daftarProduk.find(p => p.id === Number(produkDipilih));
+          const linkDownload = infoProduk?.file_url || 'Link belum tersedia';
+          const namaProd = infoProduk?.nama_produk || 'Produk Digital';
+
+          // 3. Buka Email Otomatis (Mailto)
+          const subject = `Pesanan Anda: ${namaProd}`;
+          const body = `Halo!\n\nTerima kasih sudah membeli ${namaProd}.\n\nSilakan download produk melalui link berikut:\n${linkDownload}\n\nAtau akses melalui Dashboard Member: https://loodfie-market.vercel.app/dashboard\n\nTerima kasih,\nAdmin Loodfie Market`;
+          
+          window.open(`mailto:${emailPembeli}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+
+          toast.success("Akses Diberikan & Email Terbuka!", { id: toastId }); 
+          setEmailPembeli(''); 
+          setProdukDipilih(''); 
+          ambilRiwayatTransaksi(); 
+
+      } catch (err: any) { 
+          toast.error(err.message, { id: toastId }); 
+      } finally { 
+          setLoadingTrx(false); 
+      } 
+  };
   const handleCabutAkses = async (id: number) => { if (confirm("Cabut akses?")) { await supabase.from('transaksi').delete().eq('id', id); toast.success("Dicabut"); ambilRiwayatTransaksi(); }};
 
-  // --- LOGIKA TAMPILAN ---
+  // --- LOGIKA TAMPILAN (DIPULIHKAN) ---
   const handleUpdateTampilan = async (e: React.FormEvent) => {
     e.preventDefault(); setSavingTema(true); const toastId = toast.loading("Menyimpan...");
     try {
@@ -136,9 +162,8 @@ export default function AdminPage() {
       const toastId = toast.loading("Menghapus Logo...");
       try {
           await supabase.from('toko').update({ logo: null }).eq('id', toko.id); 
-          setToko({...toko, logo: null}); 
-          setFileLogo(null);
-          toast.success("Logo Dihapus! Kembali ke Teks.", { id: toastId }); 
+          setToko({...toko, logo: null}); setFileLogo(null);
+          toast.success("Logo Dihapus!", { id: toastId }); 
       } catch (err: any) { toast.error(err.message, { id: toastId }); }
   };
 
@@ -147,19 +172,18 @@ export default function AdminPage() {
       const toastId = toast.loading("Menghapus Pop-up..."); 
       try { 
           await supabase.from('toko').update({ popup_image: null }).eq('id', toko.id); 
-          setToko({...toko, popup_image: null}); 
-          setFilePopup(null); 
+          setToko({...toko, popup_image: null}); setFilePopup(null); 
           toast.success("Pop-up Dihapus!", { id: toastId }); 
       } catch (err: any) { toast.error(err.message, { id: toastId }); } 
   };
 
-  // --- LOGIKA TESTIMONI ---
+  // --- LOGIKA TESTIMONI (DIPULIHKAN) ---
   const handleSimpanTesti = async (e: any) => { e.preventDefault(); const p = { nama: namaTesti, role: roleTesti, text: textTesti, avatar: avatarTesti, tampil: true }; if(idTesti) await supabase.from('testimoni').update(p).eq('id', idTesti); else await supabase.from('testimoni').insert([p]); setNamaTesti(''); setIdTesti(null); ambilDaftarTesti(); toast.success("Testimoni OK"); };
   const toggleStatusTesti = async (id: number, s: boolean) => { await supabase.from('testimoni').update({tampil: !s}).eq('id', id); ambilDaftarTesti(); };
   const handleHapusTesti = async (id: number) => { await supabase.from('testimoni').delete().eq('id', id); ambilDaftarTesti(); };
   const handleEditTesti = (t: any) => { setIdTesti(t.id); setNamaTesti(t.nama); setRoleTesti(t.role); setTextTesti(t.text); setAvatarTesti(t.avatar); };
 
-  if (loading) return <div className="flex h-screen items-center justify-center bg-gray-50"><p className="animate-pulse font-bold text-gray-400">Memeriksa Keamanan...</p></div>;
+  if (loading) return <div className="flex h-screen items-center justify-center bg-gray-50"><p className="animate-pulse font-bold text-gray-400">Loading...</p></div>;
   if (!isAdmin) return null;
 
   return (
@@ -169,73 +193,56 @@ export default function AdminPage() {
         
         {/* HEADER ADMIN */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-            <div className="flex items-center gap-4 w-full md:w-auto">
-                <Link href="/" className="bg-gray-800 text-white px-5 py-3 rounded-xl font-bold hover:bg-black transition shadow-lg flex items-center gap-2 text-sm">
-                    <FaArrowLeft /> Kembali ke Toko
-                </Link>
-                <div>
-                    <h1 className="text-2xl font-black text-gray-800 flex items-center gap-2"><FaLock className="text-blue-600 text-lg" /> Admin Panel</h1>
-                    <p className="text-xs text-gray-500">Mode Super Admin: Aktif</p>
-                </div>
-            </div>
-            
+            <Link href="/" className="bg-gray-800 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 text-sm"><FaArrowLeft /> Kembali</Link>
+            <h1 className="text-2xl font-black text-gray-800 flex items-center gap-2"><FaLock className="text-blue-600" /> Admin Panel</h1>
             <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
-                <button onClick={() => setActiveTab('produk')} className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 whitespace-nowrap transition ${activeTab === 'produk' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><FaStore /> Produk</button>
-                <button onClick={() => setActiveTab('transaksi')} className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 whitespace-nowrap transition ${activeTab === 'transaksi' ? 'bg-orange-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><FaMoneyBillWave /> Kasir</button>
-                <button onClick={() => setActiveTab('tampilan')} className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 whitespace-nowrap transition ${activeTab === 'tampilan' ? 'bg-purple-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><FaPalette /> Tampilan</button>
-                <button onClick={() => setActiveTab('testimoni')} className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 whitespace-nowrap transition ${activeTab === 'testimoni' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><FaCommentDots /> Testimoni</button>
+                <button onClick={() => setActiveTab('produk')} className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 whitespace-nowrap transition ${activeTab === 'produk' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}><FaStore /> Produk</button>
+                <button onClick={() => setActiveTab('transaksi')} className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 whitespace-nowrap transition ${activeTab === 'transaksi' ? 'bg-orange-600 text-white' : 'bg-gray-100'}`}><FaMoneyBillWave /> Kasir</button>
+                <button onClick={() => setActiveTab('tampilan')} className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 whitespace-nowrap transition ${activeTab === 'tampilan' ? 'bg-purple-600 text-white' : 'bg-gray-100'}`}><FaPalette /> Tampilan</button>
+                <button onClick={() => setActiveTab('testimoni')} className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 whitespace-nowrap transition ${activeTab === 'testimoni' ? 'bg-green-600 text-white' : 'bg-gray-100'}`}><FaCommentDots /> Testimoni</button>
             </div>
         </div>
 
         {/* --- TAB 1: PRODUK --- */}
         {activeTab === 'produk' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-lg h-fit sticky top-4 border border-blue-100">
+                 <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-lg border border-blue-100 sticky top-4">
                     <h2 className="font-bold mb-4 text-xl flex items-center gap-2 text-blue-700">{idProduk ? '✏️ Edit Produk' : '➕ Tambah Produk'}</h2>
                     <form onSubmit={handleSimpanProduk} className="space-y-4">
                         <div><label className="text-xs font-bold text-gray-500">Nama Produk</label><input className="w-full p-3 border rounded-xl bg-gray-50" value={nama} onChange={e=>setNama(e.target.value)} required /></div>
                         <div className="grid grid-cols-2 gap-3">
-                            <div><label className="text-xs font-bold text-gray-500">Harga Jual</label><input type="number" className="w-full p-3 border rounded-xl font-bold text-blue-600" value={harga} onChange={e=>setHarga(e.target.value)} required /></div>
-                            <div><label className="text-xs font-bold text-gray-500">Harga Coret</label><input type="number" className="w-full p-3 border rounded-xl text-red-400 line-through" value={hargaCoret} onChange={e=>setHargaCoret(e.target.value)} /></div>
+                            <div><label className="text-xs font-bold text-gray-500">Harga</label><input type="number" className="w-full p-3 border rounded-xl font-bold text-blue-600" value={harga} onChange={e=>setHarga(e.target.value)} required /></div>
+                            <div><label className="text-xs font-bold text-gray-500">Coret</label><input type="number" className="w-full p-3 border rounded-xl text-red-400 line-through" value={hargaCoret} onChange={e=>setHargaCoret(e.target.value)} /></div>
                         </div>
-                        <div><label className="text-xs font-bold text-gray-500">Kategori</label><select className="w-full p-3 border rounded-xl bg-white" value={kategori} onChange={e=>setKategori(e.target.value)}><option>Ebook</option><option>Template</option><option>Video</option></select></div>
-                        <div><label className="text-xs font-bold text-gray-500">Deskripsi</label><textarea className="w-full p-3 border rounded-xl h-24" value={deskripsi} onChange={e=>setDeskripsi(e.target.value)} /></div>
-                        <div><label className="text-xs font-bold text-gray-500">Link Mayar (Otomatis)</label><input className="w-full p-3 border rounded-xl" placeholder="https://mayar.id/..." value={linkMayar} onChange={e=>setLinkMayar(e.target.value)} /></div>
-                        
-                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                            <label className="text-xs font-bold text-blue-800 block mb-2">📁 File Produk (PDF/Zip)</label>
-                            <input type="file" onChange={e=>setFileProduk(e.target.files?.[0] || null)} className="w-full text-sm mb-2" />
-                            <p className="text-[10px] text-center text-gray-400 my-1">- ATAU LINK MANUAL -</p>
-                            <input className="w-full p-2 border rounded text-xs bg-white" placeholder="Link GDrive/YouTube" value={linkFileManual} onChange={e=>setLinkFileManual(e.target.value)} />
-                            {urlFileDatabase && <p className="text-[10px] text-green-600 mt-2 truncate">✅ File Ada: {urlFileDatabase}</p>}
-                        </div>
-
-                        <div className="bg-gray-50 p-3 rounded-xl border"><label className="text-xs font-bold block mb-2">🖼️ Gambar Cover</label><input type="file" onChange={e=>setFileGambar(e.target.files?.[0] || null)} className="text-sm w-full" /></div>
+                        <div><label className="text-xs font-bold text-gray-500">Kategori</label><select className="w-full p-3 border rounded-xl" value={kategori} onChange={e=>setKategori(e.target.value)}><option>Ebook</option><option>Template</option><option>Video</option></select></div>
+                        <div><label className="text-xs font-bold text-gray-500">Link File (GDrive/Lainnya)</label><input className="w-full p-3 border rounded-xl" placeholder="Link Download..." value={linkFileManual} onChange={e=>setLinkFileManual(e.target.value)} /></div>
+                        <div className="bg-blue-50 p-3 rounded-xl"><label className="text-xs font-bold text-blue-700">Upload File (Max 50MB)</label><input type="file" onChange={e=>setFileProduk(e.target.files?.[0] || null)} className="w-full text-xs" /></div>
+                        <div className="bg-gray-50 p-3 rounded-xl"><label className="text-xs font-bold">Upload Cover</label><input type="file" onChange={e=>setFileGambar(e.target.files?.[0] || null)} className="w-full text-xs" /></div>
                         
                         <div className="flex gap-2 pt-2">
                             {idProduk && <button type="button" onClick={handleBatalEdit} className="w-1/3 bg-gray-200 py-3 rounded-xl font-bold text-gray-600">Batal</button>}
-                            <button disabled={uploading} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 shadow-lg">{uploading ? 'Upload...' : 'Simpan Produk'}</button>
+                            <button disabled={uploading} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 shadow-lg">{uploading ? 'Upload...' : 'Simpan'}</button>
                         </div>
                     </form>
                 </div>
+                
                 <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
-                    <h2 className="font-bold mb-4 text-xl">Daftar Produk ({daftarProduk.length})</h2>
-                    <div className="space-y-3 max-h-[700px] overflow-y-auto pr-2">
+                     <h2 className="font-bold mb-4 text-xl">Daftar Produk</h2>
+                     <div className="space-y-3 max-h-[700px] overflow-y-auto">
                         {daftarProduk.map(p => (
                             <div key={p.id} className="flex gap-4 p-4 border rounded-2xl items-center hover:bg-gray-50 transition">
-                                <img src={p.gambar} className="w-16 h-16 rounded-lg object-cover bg-gray-200" />
+                                <img src={p.gambar} className="w-12 h-12 rounded-lg object-cover bg-gray-200" />
                                 <div className="flex-grow">
-                                    <h3 className="font-bold text-gray-800">{p.nama_produk}</h3>
-                                    <p className="text-blue-600 font-bold text-sm">Rp {p.harga}</p>
-                                    <span className="text-[10px] bg-gray-200 px-2 py-0.5 rounded text-gray-600 uppercase">{p.kategori}</span>
+                                    <h3 className="font-bold text-gray-800 text-sm">{p.nama_produk}</h3>
+                                    <p className="text-blue-600 font-bold text-xs">Rp {p.harga}</p>
                                 </div>
-                                <div className="flex flex-col gap-2">
-                                    <button onClick={()=>handleEditClick(p)} className="bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-200">Edit</button>
-                                    <button onClick={()=>handleHapusProduk(p.id)} className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-200">Hapus</button>
+                                <div className="flex gap-2">
+                                    <button onClick={()=>handleEditClick(p)} className="bg-blue-100 text-blue-600 px-3 py-1 rounded text-xs font-bold">Edit</button>
+                                    <button onClick={()=>handleHapusProduk(p.id)} className="bg-red-100 text-red-600 px-3 py-1 rounded text-xs font-bold">Hapus</button>
                                 </div>
                             </div>
                         ))}
-                    </div>
+                     </div>
                 </div>
             </div>
         )}
@@ -245,21 +252,23 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="bg-white p-6 rounded-3xl shadow-lg h-fit border border-orange-200 sticky top-4">
                     <h2 className="font-bold mb-4 text-xl text-orange-600 flex items-center gap-2"><FaMoneyBillWave /> Kasir Manual</h2>
+                    <p className="text-xs text-gray-500 mb-4">Berikan akses produk & kirim email otomatis.</p>
                     <form onSubmit={handleBeriAkses} className="space-y-4">
-                        <div><label className="text-xs font-bold text-gray-500">Email Pembeli</label><input type="email" required placeholder="contoh@email.com" className="w-full p-3 border rounded-xl bg-orange-50 font-bold text-gray-800" value={emailPembeli} onChange={e=>setEmailPembeli(e.target.value)} /></div>
+                        <div><label className="text-xs font-bold text-gray-500">Email Pembeli</label><input type="email" required placeholder="pembeli@gmail.com" className="w-full p-3 border rounded-xl bg-orange-50 font-bold text-gray-800" value={emailPembeli} onChange={e=>setEmailPembeli(e.target.value)} /></div>
                         <div><label className="text-xs font-bold text-gray-500">Pilih Produk</label><select required className="w-full p-3 border rounded-xl bg-white" value={produkDipilih} onChange={e=>setProdukDipilih(e.target.value)}><option value="">-- Pilih Produk --</option>{daftarProduk.map(p=><option key={p.id} value={p.id}>{p.nama_produk}</option>)}</select></div>
-                        <button disabled={loadingTrx} className="w-full bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700 shadow-lg">{loadingTrx ? '...' : '✅ Beri Akses'}</button>
+                        <button disabled={loadingTrx} className="w-full bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700 shadow-lg flex justify-center items-center gap-2">
+                             {loadingTrx ? '...' : <><FaEnvelope /> Kirim Akses & Email</>}
+                        </button>
                     </form>
                 </div>
                 <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
                     <h2 className="font-bold mb-4 text-xl">Riwayat Transaksi</h2>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th className="px-4 py-3">Tanggal</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Produk</th><th className="px-4 py-3">Aksi</th></tr></thead>
+                            <thead className="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th className="px-4 py-3">Email</th><th className="px-4 py-3">Produk</th><th className="px-4 py-3">Aksi</th></tr></thead>
                             <tbody>
                                 {riwayatTransaksi.map(t=>(
                                     <tr key={t.id} className="border-b hover:bg-gray-50">
-                                        <td className="px-4 py-3">{new Date(t.created_at).toLocaleDateString()}</td>
                                         <td className="px-4 py-3 font-bold">{t.user_email}</td>
                                         <td className="px-4 py-3 text-gray-600">{t.produk?.nama_produk}</td>
                                         <td className="px-4 py-3"><button onClick={()=>handleCabutAkses(t.id)} className="text-red-500 text-xs font-bold bg-red-50 px-2 py-1 rounded hover:bg-red-100">Cabut</button></td>
@@ -272,7 +281,7 @@ export default function AdminPage() {
             </div>
         )}
 
-        {/* --- TAB 3: TAMPILAN --- */}
+        {/* --- TAB 3: TAMPILAN (DIPULIHKAN FULL) --- */}
         {activeTab === 'tampilan' && (
             <div className="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-xl border border-purple-100">
                 <h2 className="text-2xl font-bold mb-6 text-purple-700 flex items-center gap-2"><FaPalette /> Branding & Tampilan</h2>
@@ -295,7 +304,7 @@ export default function AdminPage() {
                                 <div className="h-20 w-20 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-xs text-center p-2">Belum ada logo</div>
                             )}
                             <div className="flex-grow">
-                                <input type="file" accept="image/*" onChange={e => setFileLogo(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200" />
+                                <input type="file" accept="image/*" onChange={e => setFileLogo(e.target.files?.[0] || null)} className="w-full text-sm" />
                             </div>
                         </div>
                     </div>
@@ -304,31 +313,14 @@ export default function AdminPage() {
                     <div className="bg-blue-50 p-6 rounded-2xl border border-blue-200">
                         <label className="block text-sm font-bold text-blue-800 mb-4">📊 Data & Pesan Sistem</label>
                         <div className="grid grid-cols-3 gap-4 mb-4">
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-1 block">Total Member</label>
-                                <input type="text" className="w-full p-3 border rounded-xl font-bold text-gray-800" value={toko.total_member || ''} onChange={e => setToko({...toko, total_member: e.target.value})} placeholder="100+" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-1 block">Produk Terjual</label>
-                                <input type="text" className="w-full p-3 border rounded-xl font-bold text-gray-800" value={toko.total_terjual || ''} onChange={e => setToko({...toko, total_terjual: e.target.value})} placeholder="500+" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-1 block">Kepuasan</label>
-                                <input type="text" className="w-full p-3 border rounded-xl font-bold text-gray-800" value={toko.kepuasan || ''} onChange={e => setToko({...toko, kepuasan: e.target.value})} placeholder="4.9" />
-                            </div>
+                            <div><label className="text-xs font-bold text-gray-500 mb-1 block">Total Member</label><input type="text" className="w-full p-3 border rounded-xl font-bold text-gray-800" value={toko.total_member || ''} onChange={e => setToko({...toko, total_member: e.target.value})} placeholder="100+" /></div>
+                            <div><label className="text-xs font-bold text-gray-500 mb-1 block">Produk Terjual</label><input type="text" className="w-full p-3 border rounded-xl font-bold text-gray-800" value={toko.total_terjual || ''} onChange={e => setToko({...toko, total_terjual: e.target.value})} placeholder="500+" /></div>
+                            <div><label className="text-xs font-bold text-gray-500 mb-1 block">Kepuasan</label><input type="text" className="w-full p-3 border rounded-xl font-bold text-gray-800" value={toko.kepuasan || ''} onChange={e => setToko({...toko, kepuasan: e.target.value})} placeholder="4.9" /></div>
                         </div>
                         
-                        {/* INPUT PESAN LOGIN POPUP */}
                         <div>
-                            <label className="text-xs font-bold text-blue-700 mb-1 block">🔒 Pesan Popup Login (Wajib Login)</label>
-                            <input 
-                                type="text" 
-                                className="w-full p-3 border rounded-xl border-blue-200 bg-white font-medium text-gray-700 focus:ring-2 focus:ring-blue-300 outline-none" 
-                                value={toko.pesan_login || ''} 
-                                onChange={e => setToko({...toko, pesan_login: e.target.value})} 
-                                placeholder="Eits, Member Only! Silakan Login dulu..." 
-                            />
-                            <p className="text-[10px] text-blue-400 mt-1">Teks ini akan muncul jika non-member mencoba membeli.</p>
+                            <label className="text-xs font-bold text-blue-700 mb-1 block">🔒 Pesan Popup Login</label>
+                            <input type="text" className="w-full p-3 border rounded-xl border-blue-200 bg-white font-medium text-gray-700" value={toko.pesan_login || ''} onChange={e => setToko({...toko, pesan_login: e.target.value})} placeholder="Eits, Member Only!" />
                         </div>
                     </div>
 
@@ -368,7 +360,7 @@ export default function AdminPage() {
             </div>
         )}
 
-        {/* --- TAB 4: TESTIMONI --- */}
+        {/* --- TAB 4: TESTIMONI (DIPULIHKAN FULL) --- */}
         {activeTab === 'testimoni' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="bg-white p-6 rounded-3xl shadow-lg h-fit border border-green-200 sticky top-4">
