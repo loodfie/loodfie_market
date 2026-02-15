@@ -36,7 +36,7 @@ export default function AdminPage() {
   const [riwayatTransaksi, setRiwayatTransaksi] = useState<any[]>([]);
   const [loadingTrx, setLoadingTrx] = useState(false);
 
-  // --- STATE TAMPILAN (KEMBALI) ---
+  // --- STATE TAMPILAN ---
   const [toko, setToko] = useState<any>({});
   const [fileHeader, setFileHeader] = useState<File | null>(null);
   const [fileFooter, setFileFooter] = useState<File | null>(null);
@@ -44,7 +44,7 @@ export default function AdminPage() {
   const [fileLogo, setFileLogo] = useState<File | null>(null);
   const [savingTema, setSavingTema] = useState(false);
 
-  // --- STATE TESTIMONI (KEMBALI) ---
+  // --- STATE TESTIMONI ---
   const [daftarTesti, setDaftarTesti] = useState<any[]>([]);
   const [idTesti, setIdTesti] = useState<number | null>(null);
   const [namaTesti, setNamaTesti] = useState('');
@@ -52,14 +52,25 @@ export default function AdminPage() {
   const [textTesti, setTextTesti] = useState('');
   const [avatarTesti, setAvatarTesti] = useState('😎');
 
-  // --- INIT DATA ---
+  // --- INIT DATA (SECURE VERSION) ---
   useEffect(() => {
     async function initAdmin() {
       const { data: { session } } = await supabase.auth.getSession();
-      const emailBos = "pordjox75@gmail.com"; 
       
+      // 🔥 PENTING: Ambil email dari Environment Variable (Aman dari intipan)
+      const emailBos = process.env.NEXT_PUBLIC_ADMIN_EMAIL; 
+      
+      // Cek apakah email di .env sudah disetting?
+      if (!emailBos) {
+          toast.error("⚠️ Konfigurasi Server Error: Email Admin belum disetting!");
+          console.error("NEXT_PUBLIC_ADMIN_EMAIL is missing in .env");
+          setLoading(false);
+          return;
+      }
+
+      // Cek Validasi Login
       if (!session || session.user.email !== emailBos) {
-        toast.error("⛔ AREA TERLARANG!");
+        toast.error("⛔ AREA TERLARANG! Kamu bukan Admin.");
         router.replace('/'); 
         return;
       }
@@ -103,19 +114,16 @@ export default function AdminPage() {
       const toastId = toast.loading("Memberikan Akses..."); 
       
       try { 
-          // 1. Masukkan ke Database
           await supabase.from('transaksi').insert([{ 
               user_email: emailPembeli, 
               produk_id: Number(produkDipilih), 
               status: 'LUNAS' 
           }]); 
 
-          // 2. Ambil Info Produk untuk Email
           const infoProduk = daftarProduk.find(p => p.id === Number(produkDipilih));
           const linkDownload = infoProduk?.file_url || 'Link belum tersedia';
           const namaProd = infoProduk?.nama_produk || 'Produk Digital';
 
-          // 3. Buka Email Otomatis (Mailto)
           const subject = `Pesanan Anda: ${namaProd}`;
           const body = `Halo!\n\nTerima kasih sudah membeli ${namaProd}.\n\nSilakan download produk melalui link berikut:\n${linkDownload}\n\nAtau akses melalui Dashboard Member: https://loodfie-market.vercel.app/dashboard\n\nTerima kasih,\nAdmin Loodfie Market`;
           
@@ -134,7 +142,7 @@ export default function AdminPage() {
   };
   const handleCabutAkses = async (id: number) => { if (confirm("Cabut akses?")) { await supabase.from('transaksi').delete().eq('id', id); toast.success("Dicabut"); ambilRiwayatTransaksi(); }};
 
-  // --- LOGIKA TAMPILAN (DIPULIHKAN) ---
+  // --- LOGIKA TAMPILAN ---
   const handleUpdateTampilan = async (e: React.FormEvent) => {
     e.preventDefault(); setSavingTema(true); const toastId = toast.loading("Menyimpan...");
     try {
@@ -177,7 +185,7 @@ export default function AdminPage() {
       } catch (err: any) { toast.error(err.message, { id: toastId }); } 
   };
 
-  // --- LOGIKA TESTIMONI (DIPULIHKAN) ---
+  // --- LOGIKA TESTIMONI ---
   const handleSimpanTesti = async (e: any) => { e.preventDefault(); const p = { nama: namaTesti, role: roleTesti, text: textTesti, avatar: avatarTesti, tampil: true }; if(idTesti) await supabase.from('testimoni').update(p).eq('id', idTesti); else await supabase.from('testimoni').insert([p]); setNamaTesti(''); setIdTesti(null); ambilDaftarTesti(); toast.success("Testimoni OK"); };
   const toggleStatusTesti = async (id: number, s: boolean) => { await supabase.from('testimoni').update({tampil: !s}).eq('id', id); ambilDaftarTesti(); };
   const handleHapusTesti = async (id: number) => { await supabase.from('testimoni').delete().eq('id', id); ambilDaftarTesti(); };
@@ -281,7 +289,7 @@ export default function AdminPage() {
             </div>
         )}
 
-        {/* --- TAB 3: TAMPILAN (DIPULIHKAN FULL) --- */}
+        {/* --- TAB 3: TAMPILAN --- */}
         {activeTab === 'tampilan' && (
             <div className="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-xl border border-purple-100">
                 <h2 className="text-2xl font-bold mb-6 text-purple-700 flex items-center gap-2"><FaPalette /> Branding & Tampilan</h2>
@@ -360,7 +368,7 @@ export default function AdminPage() {
             </div>
         )}
 
-        {/* --- TAB 4: TESTIMONI (DIPULIHKAN FULL) --- */}
+        {/* --- TAB 4: TESTIMONI --- */}
         {activeTab === 'testimoni' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="bg-white p-6 rounded-3xl shadow-lg h-fit border border-green-200 sticky top-4">
