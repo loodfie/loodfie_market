@@ -34,7 +34,9 @@ export async function POST(request: Request) {
         }));
 
         const snap = new Midtrans.Snap({
-            isProduction: true, // Pastikan ini true untuk Live Mode
+            // ⚠️ PENTING: Saya ubah jadi FALSE dulu karena Bos sedang pakai Sandbox (SB-Mid...)
+            // Nanti kalau sudah Production Key, ubah lagi jadi true.
+            isProduction: false, 
             serverKey: process.env.MIDTRANS_SERVER_KEY,
             clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY,
         });
@@ -49,8 +51,11 @@ export async function POST(request: Request) {
                 first_name: customer.name || 'Pelanggan',
                 email: customer.email,
             },
+            // 🔥 INI DIA JURUS SAKTI BYPASS CONFIGURATION 🔥
+            // Kita paksa Midtrans lapor ke sini, abaikan settingan dashboard yang hilang.
+            notification_url: "https://loodfie-market-oy4u.vercel.app/api/webhooks/midtrans",
             callbacks: {
-                finish: 'https://loodfie-market.vercel.app/dashboard' // Redirect setelah bayar
+                finish: 'https://loodfie-market-oy4u.vercel.app/dashboard' // Redirect setelah bayar
             }
         };
 
