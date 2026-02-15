@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-
 // @ts-ignore
 import Midtrans from 'midtrans-client'; 
 
@@ -7,61 +6,48 @@ export async function POST(request: Request) {
     try {
         const { id, total, items, customer } = await request.json();
 
-        // --- 🛡️ SECURITY CHECK 1: Cek Server Key ---
-        if (!process.env.MIDTRANS_SERVER_KEY) {
-            console.error("❌ MIDTRANS_SERVER_KEY tidak ditemukan di .env");
-            return NextResponse.json({ error: "Konfigurasi Server Bermasalah" }, { status: 500 });
-        }
-
-        // --- 🛡️ SECURITY CHECK 2: Validasi Hitungan Matematika ---
-        // Kita hitung ulang total dari item yang dikirim. Jangan percaya 'total' mentah dari frontend.
-        const calculatedTotal = items.reduce((acc: number, item: any) => {
-            return acc + (Number(item.price) * Number(item.quantity));
-        }, 0);
-
-        if (calculatedTotal !== Number(total)) {
-            console.error(`🚨 PERCOBAAN MANIPULASI HARGA! Client: ${total}, Server: ${calculatedTotal}`);
-            return NextResponse.json({ error: "Total harga tidak valid/dimanipulasi." }, { status: 400 });
-        }
-
-        // --- 🧹 DATA SANITIZATION (Pembersihan Data) ---
-        // Midtrans mewajibkan harga bulat (integer), tidak boleh ada koma.
-        const cleanItems = items.map((item: any) => ({
-            id: item.id,
-            price: Math.round(Number(item.price)), // Pastikan bulat
-            quantity: Math.round(Number(item.quantity)),
-            name: item.name.substring(0, 50) // Midtrans membatasi nama max 50 karakter
-        }));
+        // Debugging: Cek apakah Server Key terbaca di Vercel
+        // Kita hanya log 5 huruf awal biar aman & tidak diblokir GitHub
+        const serverKeyDebug = process.env.MIDTRANS_SERVER_KEY 
+            ? process.env.MIDTRANS_SERVER_KEY.substring(0, 5) + "..." 
+            : "KOSONG/TIDAK TERBACA";
+            
+        console.log("🔑 Debug Server Key:", serverKeyDebug);
+        console.log("⚙️ Mode Production:", false);
 
         const snap = new Midtrans.Snap({
-            // ⚠️ PENTING: Saya ubah jadi FALSE dulu karena Bos sedang pakai Sandbox (SB-Mid...)
-            // Nanti kalau sudah Production Key, ubah lagi jadi true.
-            isProduction: false, 
-            serverKey: process.env.MIDTRANS_SERVER_KEY,
-            clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY,
+            isProduction: false, // Wajib FALSE untuk Sandbox
+            serverKey: process.env.MIDTRANS_SERVER_KEY, 
+            clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY, 
         });
+
+        // Bersihkan Data
+        const cleanItems = items.map((item: any) => ({
+            id: item.id,
+            price: Math.round(Number(item.price)),
+            quantity: Math.round(Number(item.quantity)),
+            name: item.name.substring(0, 50)
+        }));
 
         const parameter = {
             transaction_details: {
                 order_id: id,
-                gross_amount: Math.round(calculatedTotal), // Pakai hasil hitungan server
+                gross_amount: Math.round(Number(total)),
             },
             item_details: cleanItems,
             customer_details: {
                 first_name: customer.name || 'Pelanggan',
                 email: customer.email,
             },
-            // 🔥 INI DIA JURUS SAKTI BYPASS CONFIGURATION 🔥
-            // Kita paksa Midtrans lapor ke sini, abaikan settingan dashboard yang hilang.
+            // Webhook & Redirect
             notification_url: "https://loodfie-market-oy4u.vercel.app/api/webhooks/midtrans",
             callbacks: {
-                finish: 'https://loodfie-market-oy4u.vercel.app/dashboard' // Redirect setelah bayar
+                finish: 'https://loodfie-market-oy4u.vercel.app/dashboard'
             }
         };
 
         const token = await snap.createTransaction(parameter);
-        console.log("✅ Token Midtrans Berhasil Dibuat:", id);
-        
+        console.log("✅ Token Sukses:", token);
         return NextResponse.json(token);
 
     } catch (error: any) {
