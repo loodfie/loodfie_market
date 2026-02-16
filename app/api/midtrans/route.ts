@@ -1,61 +1,64 @@
 import { NextResponse } from 'next/server';
-// @ts-ignore
-import Midtrans from 'midtrans-client'; 
 
 export async function POST(request: Request) {
     try {
         const { id, total, items, customer } = await request.json();
 
-        // --- 💀 JURUS BYPASS GITHUB & VERCEL ENV ---
-        // Kita pecah string kunci supaya tidak terdeteksi scanner GitHub
-        // Tapi saat digabung (part1 + part2), hasilnya adalah KUNCI SANDBOX ASLI Bos.
+        // 1. AMBIL KUNCI DARI VERCEL
+        const serverKey = process.env.MIDTRANS_SERVER_KEY;
         
-        const serverKeyPart1 = "Mid-server-";
-        const serverKeyPart2 = "vcbcRaQDoR6Wtrn7OFsruVQ8"; // <-- Ini sisa kunci Sandbox Bos
-        const finalServerKey = serverKeyPart1 + serverKeyPart2;
+        // DEBUG: Cek apakah kunci terbaca (Tanpa membocorkan kunci asli)
+        console.log("🔍 Cek Server Key:", serverKey ? "✅ ADA (Awalan: " + serverKey.substring(0, 4) + "...)" : "❌ KOSONG/UNDEFINED");
 
-        const clientKeyPart1 = "Mid-client-";
-        const clientKeyPart2 = "oXTEmTWQwcCK6cKR";
-        const finalClientKey = clientKeyPart1 + clientKeyPart2;
+        if (!serverKey) {
+            throw new Error("Server Key belum disetting di Vercel Environment Variables!");
+        }
 
-        console.log("💉 Menyuntikkan Kunci Manual (Bypass Env)...");
+        // 2. ENCODE BASE64 (Cara Resmi Midtrans)
+        const base64Key = Buffer.from(serverKey + ":").toString('base64');
 
-        const snap = new Midtrans.Snap({
-            isProduction: false, // WAJIB FALSE (Sandbox)
-            serverKey: finalServerKey, // Pakai kunci suntikan
-            clientKey: finalClientKey, // Pakai kunci suntikan
+        // 3. FETCH KE SANDBOX
+        const response = await fetch('https://app.sandbox.midtrans.com/snap/v1/transactions', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${base64Key}` 
+            },
+            body: JSON.stringify({
+                transaction_details: {
+                    order_id: id,
+                    gross_amount: Math.round(Number(total)),
+                },
+                item_details: items.map((item: any) => ({
+                    id: item.id,
+                    price: Math.round(Number(item.price)),
+                    quantity: Math.round(Number(item.quantity)),
+                    name: item.name.substring(0, 50)
+                })),
+                customer_details: {
+                    first_name: customer.name || 'Pelanggan',
+                    email: customer.email,
+                },
+                callbacks: {
+                    finish: 'https://loodfie-market-oy4u.vercel.app/dashboard'
+                }
+            })
         });
 
-        // --- 🧹 Data Sanitization ---
-        const cleanItems = items.map((item: any) => ({
-            id: item.id,
-            price: Math.round(Number(item.price)),
-            quantity: Math.round(Number(item.quantity)),
-            name: item.name.substring(0, 50)
-        }));
+        const data = await response.json();
 
-        const parameter = {
-            transaction_details: {
-                order_id: id,
-                gross_amount: Math.round(Number(total)),
-            },
-            item_details: cleanItems,
-            customer_details: {
-                first_name: customer.name || 'Pelanggan',
-                email: customer.email,
-            },
-            notification_url: "https://loodfie-market-oy4u.vercel.app/api/webhooks/midtrans",
-            callbacks: {
-                finish: 'https://loodfie-market-oy4u.vercel.app/dashboard'
-            }
-        };
+        // 4. CEK HASIL
+        if (!response.ok) {
+            console.error("🔥 Midtrans Menolak:", JSON.stringify(data));
+            throw new Error(`Midtrans Error: ${data.error_messages?.[0] || 'Unknown Error'}`);
+        }
 
-        const token = await snap.createTransaction(parameter);
-        console.log("✅ Token Sukses Dibuat:", token);
-        return NextResponse.json(token);
+        console.log("✅ Token Berhasil:", data.token);
+        return NextResponse.json(data);
 
     } catch (error: any) {
-        console.error("🔥 Error Midtrans:", error.message);
+        console.error("🔥 System Error:", error.message);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
