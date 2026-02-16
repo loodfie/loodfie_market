@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useParams, useRouter } from 'next/navigation';
+// Hapus import useParams karena id dilempar lewat props
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FaArrowLeft, FaShoppingCart, FaCheckCircle, FaStar, FaWhatsapp, FaCreditCard } from 'react-icons/fa';
+import { FaArrowLeft, FaShoppingCart, FaCreditCard, FaWhatsapp } from 'react-icons/fa';
 import { useCart } from '@/context/CartContext';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -15,8 +16,8 @@ declare global {
   }
 }
 
-export default function DetailProdukPage() {
-  const { id } = useParams();
+// Menerima ID Produk dari Page Server Component
+export default function ClientProduk({ idProduk }: { idProduk: string }) {
   const [produk, setProduk] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
@@ -27,27 +28,20 @@ export default function DetailProdukPage() {
   useEffect(() => {
     async function getData() {
       // 1. Ambil Data Produk
-      const { data } = await supabase.from('produk').select('*').eq('id', id).single();
+      const { data } = await supabase.from('produk').select('*').eq('id', idProduk).single();
       if (data) setProduk(data);
       
       // 2. Cek User
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user || null);
 
-      // 3. Pasang Script Midtrans
-      const scriptId = 'midtrans-script';
-      if (!document.getElementById(scriptId)) {
-        const script = document.createElement('script');
-        script.id = scriptId;
-        script.src = process.env.NEXT_PUBLIC_MIDTRANS_API_URL || 'https://app.midtrans.com/snap/snap.js'; 
-        script.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '');
-        document.body.appendChild(script);
-      }
+      // 3. SCRIPT MIDTRANS DIHAPUS DARI SINI
+      // Karena sudah dipasang secara Global & Benar di app/layout.tsx
       
       setLoading(false);
     }
     getData();
-  }, [id]);
+  }, [idProduk]);
 
   const handleAddToCart = () => {
     if (produk) {
@@ -66,7 +60,9 @@ export default function DetailProdukPage() {
     setPaying(true);
 
     try {
-        const orderId = `TRX-DIRECT-${Date.now()}`;
+        const orderId = `TRX-${Date.now()}`; // ID Transaksi Unik
+        
+        // Panggil Backend (route.ts yang sudah kita perbaiki)
         const response = await fetch('/api/midtrans', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -75,7 +71,7 @@ export default function DetailProdukPage() {
                 total: produk.harga,
                 items: [{
                     id: produk.id,
-                    price: Number(produk.harga),
+                    price: Math.round(Number(produk.harga)),
                     quantity: 1,
                     name: produk.nama_produk.substring(0, 45)
                 }],
@@ -84,29 +80,48 @@ export default function DetailProdukPage() {
         });
 
         const data = await response.json();
-        if (!data.token) throw new Error("Gagal dapat token");
+        
+        if (!response.ok) {
+            throw new Error(data.error || "Gagal menghubungi server pembayaran");
+        }
 
-        window.snap.pay(data.token, {
-            onSuccess: async function(result: any) {
-                toast.success("Lunas! 🎉");
-                await supabase.from('transaksi').insert({
-                    user_email: user.email,
-                    produk_id: produk.id,
-                    harga: produk.harga,
-                    status: 'LUNAS',
-                    order_id: orderId,
-                    metode_bayar: result.payment_type
-                });
-                router.push('/dashboard');
-            },
-            onPending: function() { toast("Menunggu pembayaran...", { icon: '⏳' }); },
-            onError: function() { toast.error("Gagal bayar"); setPaying(false); },
-            onClose: function() { setPaying(false); }
-        });
+        if (!data.token) {
+             throw new Error("Token pembayaran tidak diterima");
+        }
 
-    } catch (err) {
-        console.error(err);
-        toast.error("Gagal memproses.");
+        console.log("Token Midtrans:", data.token); // Debugging
+
+        // Memunculkan Pop-up Midtrans
+        if (window.snap) {
+            window.snap.pay(data.token, {
+                onSuccess: async function(result: any) {
+                    toast.success("Lunas! 🎉");
+                    // Simpan ke database Supabase
+                    await supabase.from('transaksi').insert({
+                        user_email: user.email,
+                        produk_id: produk.id,
+                        harga: produk.harga,
+                        status: 'LUNAS',
+                        order_id: orderId,
+                        metode_bayar: result.payment_type || 'midtrans'
+                    });
+                    router.push('/dashboard');
+                },
+                onPending: function() { toast("Menunggu pembayaran...", { icon: '⏳' }); },
+                onError: function() { toast.error("Pembayaran gagal"); setPaying(false); },
+                onClose: function() { 
+                    toast("Pembayaran belum selesai", { icon: '⚠️' });
+                    setPaying(false); 
+                }
+            });
+        } else {
+            toast.error("Script Midtrans gagal dimuat. Refresh halaman.");
+            setPaying(false);
+        }
+
+    } catch (err: any) {
+        console.error("Error Buy Now:", err);
+        toast.error(err.message || "Gagal memproses transaksi.");
         setPaying(false);
     }
   };
